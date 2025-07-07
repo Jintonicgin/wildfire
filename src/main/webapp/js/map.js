@@ -93,6 +93,7 @@ window.kakao.maps.load(function () {
       fillOpacity: 0.5,
     });
 
+	
     polygonOverlay.setMap(map);
 
     const bounds = new kakao.maps.LatLngBounds();
