@@ -1,0 +1,260 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Noto Sans KR', sans-serif;
+  background-color: #fff;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.filter-section {
+  margin: 30px auto 10px;
+  max-width: 1200px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+
+.filter-section label {
+  font-weight: 600;
+  color: #2b4c3d;
+}
+
+.filter-section select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #a3cbb0;
+}
+
+.fire-content-wrapper {
+  display: flex;
+  align-items: flex-start; /* 혹시 height 영향 줄 경우 */
+  gap: 20px;
+}
+
+.fire-map-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #eaf6ee;
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 320px;
+}
+
+#fireMap {
+  width: 100%;
+  height: 500px;
+  background-color: #d5efe0;
+  border-radius: 12px;
+}
+
+.fire-map-box{
+  margin-bottom: 12px;
+}
+
+.fire-info-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 280px;
+}
+
+.fire-list,
+.fire-alert,
+.fire-highlight {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.fire-list h3,
+.fire-alert h3,
+.fire-highlight h3 {
+  margin-bottom: 12px;
+  color: #2e4f3c;
+  font-size: 18px;
+}
+
+.fire-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.fire-list li,
+.fire-highlight p,
+.fire-alert p {
+  margin-bottom: 8px;
+  color: #3a5d4b;
+  font-size: 15px;
+}
+
+.fire-chart-section {
+  max-width: 1200px;
+  margin: 60px auto;
+  padding: 0 24px;
+}
+
+.chart-placeholder {
+  height: 300px;
+  background-color: #eef8f0;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4c6d58;
+  font-size: 16px;
+}
+
+.fire-info-wrapper {
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+
+
+@media screen and (max-width: 1024px) {
+  .fire-content-wrapper {
+    flex-direction: column;
+  }
+
+  .fire-map-box,
+  .fire-info-box {
+    width: 100%;
+  }
+
+  .fire-info-wrapper {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.filter-wrapper {
+  margin-top: 10px;
+  margin: 10px auto 20px;
+  max-width: 1200px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #eef8f0;
+  padding: 20px 24px;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.filter-label {
+  font-weight: 700;
+  font-size: 18px;
+  color: #2b4c3d;
+  min-width: 90px;
+}
+
+.filter-button {
+  padding: 8px 16px;
+  border: 1px solid #888;
+  background-color: #ffffff;
+  color: #222;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-button:hover {
+  background-color: #3da57a;
+  color: #fff;
+  border-color: #3da57a;
+}re
+
+.ts-wrapper {
+  width: 140px !important;  
+  font-size: 14px;
+}
+
+.ts-control {
+  min-width: auto;       
+  width: 160px;      
+  height: 40px;
+  padding: 8px 10px;
+  font-size: 15px;
+  border: 1px solid #a3cbb0;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #2e3b3a;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.ts-dropdown {
+  font-size: 15px;
+  border-radius: 8px;
+  background-color: #ffffff;
+  border: 1px solid #a3cbb0;
+  z-index: 999;
+}
+
+.ts-select {
+  width: 160px;
+}
+
+.ts-dropdown .option {
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.ts-dropdown .option:hover {
+  background-color: #e2f7ec;
+}
+
+#periodSubmitBtn {
+  padding: 8px 16px;
+  border: 1px solid #3da57a;
+  background-color: #3da57a;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#periodSubmitBtn:hover {
+  background-color: #2c7d5b;
+  border-color: #2c7d5b;
+}
+
+.fire-label {
+  background-color: #fff5f5;
+  border: 1px solid #ff7b7b;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #c62828;
+  box-shadow: 1px 1px 5px rgba(0,0,0,0.15);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.fire-chart-section {
+  background: #f0fdf4;
+  padding: 2rem;
+  border-radius: 20px;
+  margin: 2rem auto;
+  max-width: 100%; /* 💡 전체 가로폭에서 여유 */
+  box-sizing: border-box;
+  height: 380px;
+}
+
+#yearlyFireChart {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  margin: 0 auto;
+}
