@@ -8,6 +8,7 @@ public class Member {
   private String email;
   
   private String name;
+
   
   public Member(String username, String password, String email, String name) {
     this.username = username;
