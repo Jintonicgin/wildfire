@@ -1,42 +1,63 @@
 import ee
 import pandas as pd
 
-# 1. Earth Engine 초기화 (처음 한 번만 인증 필요)
 ee.Initialize(project='wildfire-464907')
 
-# 2. CSV 파일 경로 및 로드
-CSV_PATH = './location_detail/gangwon_fire_data.csv'
-df = pd.read_csv(CSV_PATH)
+XLSX_PATH = './location_detail/gangwon_fire_data_with_coords.xlsx'
+df = pd.read_excel(XLSX_PATH)
 
-# 3. USGS SRTM DEM 이미지 로드
 dem_dataset = ee.Image('USGS/SRTMGL1_003')
 
-# 4. DEM 값을 저장할 리스트 준비
-dem_values = []
+# 경사도, 방위각 계산 (단위: 경사도는 도 단위, 방위각도는 도 단위)
+terrain = ee.Terrain.products(dem_dataset)
+slope_img = terrain.select('slope')   # 경사도
+aspect_img = terrain.select('aspect') # 방위각
 
-# 5. 좌표별로 DEM 값 추출
+dem_values = []
+slope_values = []
+aspect_values = []
+
 for idx, row in df.iterrows():
     lat = row['latitude']
     lon = row['longitude']
     if pd.isna(lat) or pd.isna(lon):
         dem_values.append(None)
+        slope_values.append(None)
+        aspect_values.append(None)
         continue
 
-    point = ee.Geometry.Point(lon, lat)  # GEE 좌표계는 (lon, lat)
+    point = ee.Geometry.Point(lon, lat)
     try:
-        elevation = dem_dataset.sample(point, scale=30).first().get('elevation').getInfo()
-        dem_values.append(elevation)
-        print(f"Index {idx}: DEM = {elevation} m")
+        sample = dem_dataset.sample(point, scale=30).first()
+        slope_sample = slope_img.sample(point, scale=30).first()
+        aspect_sample = aspect_img.sample(point, scale=30).first()
+
+        if sample and slope_sample and aspect_sample:
+            elevation = sample.get('elevation').getInfo()
+            slope = slope_sample.get('slope').getInfo()
+            aspect = aspect_sample.get('aspect').getInfo()
+
+            dem_values.append(elevation)
+            slope_values.append(slope)
+            aspect_values.append(aspect)
+
+            print(f"Index {idx}: DEM={elevation}m, Slope={slope}°, Aspect={aspect}°")
+        else:
+            dem_values.append(None)
+            slope_values.append(None)
+            aspect_values.append(None)
+            print(f"Index {idx}: 데이터 없음")
     except Exception as e:
-        print(f"Index {idx}: DEM 조회 실패 - {e}")
         dem_values.append(None)
+        slope_values.append(None)
+        aspect_values.append(None)
+        print(f"Index {idx}: 조회 실패 - {e}")
 
-# 6. 결과를 DataFrame에 추가
 df['elevation'] = dem_values
+df['slope'] = slope_values
+df['aspect'] = aspect_values
 
-# 7. 일부 결과 출력
-print(df[['latitude', 'longitude', 'elevation']].head(20))
+print(df[['latitude', 'longitude', 'elevation', 'slope', 'aspect']].head(20))
 
-# 8. 필요 시 CSV 저장
-df.to_csv('gangwon_fire_data_with_dem.csv', index=False, encoding='utf-8-sig')
-print("✅ DEM 추가된 CSV 파일 저장 완료: gangwon_fire_data_with_dem.csv")
+df.to_csv('gangwon_fire_data_with_dem_slope_aspect.csv', index=False, encoding='utf-8-sig')
+print("✅ DEM, 경사도, 방위각 포함된 CSV 저장 완료")
