@@ -10,7 +10,7 @@ ee.Initialize(project='wildfire-464907')
 modis_ndvi_ic = ee.ImageCollection('MODIS/061/MOD13Q1').select('NDVI')
 
 # 3. MODIS Land Cover (MCD12Q1) - IGBP 분류
-modis_lc_ic = ee.ImageCollection('MODIS/006/MCD12Q1').select('LC_Type1')
+modis_lc_ic = ee.ImageCollection('MODIS/061/MCD12Q1').select('LC_Type1')
 
 def get_latest_ndvi_pre_fire(lon, lat, fire_date_str):
     geometry = ee.Geometry.Point(lon, lat)

@@ -49,8 +49,8 @@ def calculate_forest_cover(lon, lat, year, buffer_radius=5000):
     return forest_percent
 
 # 2. 엑셀 파일 불러오기 (경로는 환경에 맞게 조정)
-input_path = './gangwon_fire_data_with_ndvi_and_forest_type_mode.xlsx'
-df = pd.read_excel(input_path)
+input_path = './gangwon_fire_data_with_ndvi_and_forest_type_mode.csv'
+df = pd.read_csv(input_path)
 
 forest_cover_list = []
 
@@ -75,4 +75,4 @@ df['forest_cover_5km_percent'] = forest_cover_list
 
 # 4. 결과 확인 및 필요시 저장
 print(df[['latitude', 'longitude', 'fire_start_date', 'forest_cover_5km_percent']].head())
-df.to_excel('gangwon_fire_with_forest_cover.xlsx', index=False)
+df.to_csv('gangwon_fire_with_forest_cover.csv', index=False)
