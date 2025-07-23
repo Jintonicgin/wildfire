@@ -23,6 +23,7 @@
   
   <nav class="main-nav">
     <a href="fire.jsp">산불현황</a>
+    <a href="prediction.jsp">산불예측</a>
     <a href="recoveryMain.jsp">복원예측</a>
     <a href="#">AI 복원 조언</a>
   </nav>
@@ -44,6 +45,7 @@
   </div>
   <div class="mobile-menu-card">
     <a href="fire.jsp">산불현황</a>
+    <a href="prediction.jsp">산불예측</a>
     <a href="recoveryMain.jsp">복원예측</a>
     <a href="#">AI 복원 조언</a>
     <a href="about.jsp">ABOUT US</a>
@@ -63,13 +65,17 @@
 }
 
 .top-bar {
-  margin-top: 30px;
   display: flex;
   align-items: center;
-  position: relative;
+  flex-wrap: nowrap;
   padding: 16px 32px;
   background-color: #a8d8b6;
   border-radius: 12px;
+  overflow-x: auto;
+}
+
+.logo-area {
+  flex: 0 0 auto;
 }
 
 .mobile-header {
@@ -89,12 +95,14 @@
 }
 
 .main-nav {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 1;
   display: flex;
-  gap: 60px;
+  justify-content: center; 
+  gap: 40px;
+  white-space: nowrap;
+  text-align: center;
 }
+
 
 .main-nav a {
   margin: 0 20px;
@@ -108,7 +116,7 @@
 }
 
 .auth-links {
-  margin-left: auto;
+  flex: 0 0 auto;
   display: flex;
   gap: 14px; 
   align-items: center;
@@ -134,6 +142,7 @@
   background-color: #a8d8b6;
   border-radius: 20px;
   margin-top: 0;
+  overflow-x: hidden;
 }
 
 .mobile-header-top {
@@ -144,15 +153,17 @@
 
 .mobile-menu-card {
   background-color: #eaf6ee;
+  box-sizing: border-box;
   border-radius: 20px;
-  padding: 24px 36px;
-  width: 89%;
+  padding: 24px 20px;
+  width: calc(100% - 40px);
   max-width: 720px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
   gap: 17px;
   align-items: flex-start;
+  margin: 0 auto;
 }
 
 .mobile-menu-card a {
@@ -184,6 +195,46 @@
 @media screen and (min-width: 769px) {
   .mobile-header {
     display: none;
+  }
+}
+
+@media screen and (max-width: 1100px) {
+  .main-nav {
+    gap: 24px;
+  }
+
+  .main-nav a {
+    font-size: 20px;
+    margin: 0 12px;
+  }
+
+  .auth-links a {
+    font-size: 14px;
+  }
+
+  .top-bar {
+    padding: 12px 20px;
+    gap: 12px;
+  }
+}
+
+@media screen and (max-width: 880px) {
+  .main-nav {
+    gap: 14px;
+  }
+
+  .main-nav a {
+    font-size: 16px;
+    margin: 0 8px;
+  }
+
+  .auth-links a {
+    font-size: 13px;
+  }
+
+  .top-bar {
+    padding: 10px 16px;
+    gap: 8px;
   }
 }
 </style>

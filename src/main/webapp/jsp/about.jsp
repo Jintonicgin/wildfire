@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>About - SEED</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+	<link rel="icon" href="/WildFire/img/logo_leaf.png" type="image/png">
   <!-- CSS -->
   <link rel="stylesheet" href="/WildFire/css/about.css">
 </head>
@@ -20,9 +20,14 @@
     <h1>SEED는 이런 일을 해요</h1>
     <div class="feature-grid">
       <div class="feature-card">
-        <img src="/WildFire/img/icon_fire.png" alt="산불 알림 아이콘">
+        <img src="/WildFire/img/fire_icon.png" alt="산불 알림 아이콘">
         <h3>산불 현황 알림</h3>
         <p>실시간 산불 발생 위치와<br>위험 지역 정보를 알려드립니다.</p>
+      </div>
+      <div class="feature-card">
+        <img src="/WildFire/img/icon_fire.png" alt="산불 예측 아이콘">
+        <h3>산불 확산 경로 예측</h3>
+        <p>기상·지형 데이터를 바탕으로 <br>사용자가 선택한 위치에서의 <span class="no-break">산불 확산 경로와 속도를 예측합니다.</span></p>
       </div>
       <div class="feature-card">
         <img src="/WildFire/img/icon_forest.png" alt="복원력 분석 아이콘">

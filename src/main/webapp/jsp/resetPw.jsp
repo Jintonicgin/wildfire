@@ -6,6 +6,7 @@
   <title>비밀번호 재설정 - SEED</title>
   <link rel="stylesheet" href="/WildFire/css/main.css">
   <link rel="stylesheet" href="/WildFire/css/login.css">
+  <link rel="icon" href="/WildFire/img/logo_leaf.png" type="image/png">
 </head>
 <body>
 <div class="container">

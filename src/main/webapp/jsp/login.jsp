@@ -6,6 +6,7 @@
   <title>SEED 로그인</title>
   <link rel="stylesheet" href="/WildFire/css/main.css">
   <link rel="stylesheet" href="/WildFire/css/login.css">
+  <link rel="icon" href="/WildFire/img/logo_leaf.png" type="image/png">
 </head>
 <body>
   <div class="container">
@@ -22,7 +23,6 @@
           <button type="submit">로그인</button>
           <div class="login-options">
             <label><input type="checkbox" name="remember"> 로그인 상태 유지</label>
-            <label><input type="checkbox" name="secure"> IP 보안</label>
           </div>
         </form>
 

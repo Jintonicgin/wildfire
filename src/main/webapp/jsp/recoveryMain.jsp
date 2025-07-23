@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>SEED - Smart Ecological Evaluation & Diagnostics</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<link rel="icon" href="/WildFire/img/logo_leaf.png" type="image/png">
   <link rel="stylesheet" href="/WildFire/css/recoveryMain.css">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -49,8 +49,7 @@
   <main class="main-content-horizontal">
 
     <section class="map-section">
-      <h3 id="map-title">지역별 복원력 지도</h3>
-      <div id="map" style="width: 100%; height: 450px;"></div>
+      <div id="map" style="width: 100%; height: 550px;"></div>
     </section>
 
     <div class="bar-chart-box">

@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>산불 현황 - SEED</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <link rel="icon" href="/WildFire/img/logo_leaf.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet" />
@@ -33,7 +33,6 @@
   <section class="fire-content-wrapper">
     <!-- 지도 -->
 <div class="fire-map-box">
-<h3 class="section-title">산불 현황 지도</h3>
   <div id="fireMap" style="width: 100%; height: 500px;"></div>
 </div>
 

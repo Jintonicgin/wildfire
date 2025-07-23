@@ -19,11 +19,21 @@
   color: #2c5443;
 }
 
+.feature-section {
+  margin-top: 80px;
+  text-align: center;
+  padding: 40px 20px;
+}
+
 .feature-grid {
-  display: flex;
-  justify-content: center;
-  gap: 40px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 40px 60px; 
+  justify-items: center;
+  align-items: stretch;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .feature-card {
@@ -65,4 +75,12 @@
 
 .no-break {
   white-space: nowrap;
+}
+
+@media screen and (max-width: 768px) {
+  .feature-grid {
+    grid-template-columns: 1fr; /* 모바일: 1열 */
+    gap: 30px;
+    max-width: 90%;
+  }
 }
