@@ -68,6 +68,34 @@ body {
     font-size: 14px;
 }
 
+#region-select-wrapper {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background-color: #eaf6ee;
+  padding: 20px 24px;
+  border-radius: 12px;
+}
+
+#region-select-wrapper select {
+  width: 220px; 
+  padding: 10px 14px;
+  border: 1px solid #a3cbb0;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+#region-select-wrapper label {
+  font-weight: 700;
+  font-size: 18px;
+  color: #2c6b50;
+  white-space: nowrap;
+}
+
 /* === TomSelect 스타일 커스터마이징 === */
 .ts-wrapper.single .ts-control {
     background-color: #fff;

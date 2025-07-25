@@ -20,7 +20,7 @@ def safe_pow(x, power):
         return 0.0
 
 def safe_value(x, fallback=-999):
-    return float(x) if np.isfinite(x) else fallback
+    return float(x) if np.isfinite(x) and x >= 0 else fallback
 
 def fwi_calc(T, RH, W, P, month, FFMC0=85, DMC0=6, DC0=15):
     try:
@@ -46,7 +46,9 @@ def fwi_calc(T, RH, W, P, month, FFMC0=85, DMC0=6, DC0=15):
         FFMC = min(max(FFMC, 0), 101)
 
         # DMC
-        daylength = 4.7 if month not in range(4, 10) else [6.5, 5.4, 5.4, 5.8, 6.4, 6.2][month - 4]
+        # ✅ Bug Fix: Use a 12-month list to prevent IndexError
+        daylength_list = [4.7, 4.7, 4.7, 6.5, 5.4, 5.4, 5.8, 6.4, 6.2, 4.7, 4.7, 4.7]
+        daylength = daylength_list[month - 1] if 1 <= month <= 12 else 4.7
         rk = 1.894 * (T + 1.1) * (100.0 - RH) * daylength * 0.0001
         DMC = DMC0 + rk
         if P > 1.5:
@@ -57,7 +59,9 @@ def fwi_calc(T, RH, W, P, month, FFMC0=85, DMC0=6, DC0=15):
             DMC = 43.43 * (5.6348 - safe_log(wmr - 20.0))
 
         # DC
-        Lf = 6.0 if month not in range(4, 10) else [9.0, 8.0, 7.0, 7.0, 7.0, 8.0][month - 4]
+        # ✅ Bug Fix: Use a 12-month list to prevent IndexError
+        Lf_list = [6.0, 6.0, 6.0, 9.0, 8.0, 7.0, 7.0, 7.0, 8.0, 6.0, 6.0, 6.0]
+        Lf = Lf_list[month - 1] if 1 <= month <= 12 else 6.0
         V = 0.36 * (T + 2.8) + Lf
         DC = DC0 + 0.5 * V
         if P > 2.8:
@@ -89,6 +93,7 @@ def fwi_calc(T, RH, W, P, month, FFMC0=85, DMC0=6, DC0=15):
             "BUI": safe_value(BUI),
             "FWI": safe_value(FWI)
         }
+
 
     except Exception as e:
         # fallback in case any error occurs

@@ -14,6 +14,14 @@ document.addEventListener("DOMContentLoaded", function () {
         maxOptions: 4,
         placeholder: "예측 시간 선택"
     });
+    new TomSelect("#city", {
+        create: false,
+        allowEmptyOption: true,
+        controlInput: false,
+        sortField: [],
+        maxOptions: 18,
+        placeholder: "지역 선택"
+    });
 
     kakao.maps.load(function () {
         const mapContainer = document.getElementById('predictionMap');
@@ -47,12 +55,12 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById('predictionForm').addEventListener('submit', function (e) {
         e.preventDefault();
 
-		if (!window.isLoggedIn) {
-		        e.preventDefault();
-		        alert("로그인 후 이용하실 수 있습니다.");
-		        window.location.href = "/WildFire/jsp/login.jsp";
-		        return;
-		      }
+        if (!window.isLoggedIn) {
+            e.preventDefault();
+            alert("로그인 후 이용하실 수 있습니다.");
+            window.location.href = "/WildFire/jsp/login.jsp";
+            return;
+        }
 
         const lat = parseFloat(document.getElementById('latitude').value);
         const lng = parseFloat(document.getElementById('longitude').value);
@@ -97,29 +105,29 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
 
-                // ✅ 예측 결과 바로 사용 (data.prediction ❌ → data ✅)
-                document.getElementById('predictedDamageArea').textContent =
-                    data.damage_area.toFixed(2) + " ha";
+				document.getElementById('predictedDamageArea').textContent =
+				   data.final_damage_area.toFixed(2) + " ha"; // final_damage_area 사용
+				   
+				   const lastPathTrace = data.path_trace[data.path_trace.length - 1];
+				   const direction = convertDegreeToDirection(lastPathTrace.wind_direction_deg); // path_trace에서 풍향 가져오기
+				  
+				   const speedValue = calculateDistance(lat, lng, data.final_lat, data.final_lon);
+				   const speed = speedValue.toFixed(2) + " m";
+				  
+				   const directionContainer = document.getElementById('predictedSpreadDirection');
+				   directionContainer.innerHTML = ''; 
+				   const arrow = document.createElement('div');
+				   arrow.classList.add('direction-arrow', 'dir-' + direction);
+				   directionContainer.appendChild(arrow);
+				  
+				   const infoText = document.createElement('div');
+				   infoText.textContent = `${direction} 방향 / 거리: ${speed}`;
+				   infoText.style.marginTop = '5px';
+				   directionContainer.appendChild(infoText);
 
-                const direction = convertDegreeToDirection(data.wind_direction_deg);
-                const speedValue = data.predicted_distance_m;
-                const speed = speedValue.toFixed(2) + " m";
-
-                const directionContainer = document.getElementById('predictedSpreadDirection');
-                directionContainer.innerHTML = '';
-
-                const arrow = document.createElement('div');
-                arrow.classList.add('direction-arrow', 'dir-' + direction);
-                directionContainer.appendChild(arrow);
-
-                const infoText = document.createElement('div');
-                infoText.textContent = `${direction} 방향 / 거리: ${speed}`;
-                infoText.style.marginTop = '5px';
-                directionContainer.appendChild(infoText);
-
-                drawDamageEllipse(map, lat, lng, speedValue, hour, direction, data.damage_area);
-                addDirectionArrowOnMap(map, lat, lng, direction);
-                addPredictionLabelOnMap(map, lat, lng, data.damage_area, direction, speedValue);
+				   drawDamageEllipse(map, lat, lng, speedValue, hour, direction, data.final_damage_area); // final_damage_area 사용
+				   addDirectionArrowOnMap(map, lat, lng, direction);
+				   addPredictionLabelOnMap(map, lat, lng, data.final_damage_area, direction, speedValue); // final_damage_area 사용
 
             } catch (e) {
                 console.error("❌ JSON 파싱 오류:", e);
@@ -142,6 +150,23 @@ document.addEventListener("DOMContentLoaded", function () {
             console.warn("❗ loadingOverlay 요소가 없습니다.");
         }
     }
+	
+	function calculateDistance(lat1, lon1, lat2, lon2) {
+	    const R = 6371e3; // metres
+	    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+	    const φ2 = lat2 * Math.PI / 180;
+	    const Δφ = (lat2 - lat1) * Math.PI / 180;
+	    const Δλ = (lon2 - lon1) * Math.PI / 180;
+	    
+	    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+	   Math.cos(φ1) * Math.cos(φ2) *
+	   Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+	   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	   
+	   const d = R * c; // in metres
+	   return d;
+	   }
+
 
     function convertDegreeToDirection(deg) {
         if (deg === -999 || deg === null || deg === undefined || isNaN(deg)) return 'N';

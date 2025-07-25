@@ -6,15 +6,15 @@ import numpy as np
 import pandas as pd
 import ee
 import warnings
+import math
 
 # 외부 모듈
 sys.path.append("/Users/mmymacymac/Developer/Projects/eclipse/WildFire/dataset/")
 from fetch_all_weather import fetch_all_weather_features
-from fwi_calc import fwi_calc
 
 warnings.filterwarnings("ignore")
 
-# ✅ GEE 초기화
+# GEE 초기화
 try:
     ee.Initialize(project='wildfire-464907')
 except Exception:
@@ -23,14 +23,16 @@ except Exception:
 
 MODEL_PATH = "/Users/mmymacymac/Developer/Projects/eclipse/WildFire/dataset/"
 
+# --- 모델 및 데이터 로드 ---
 def load_models():
     models = {
-        "area_model": joblib.load(MODEL_PATH + "area_regressor_model.joblib"),
+        "area_model": joblib.load(MODEL_PATH + "area_regressor_model_v3.joblib"),
         "speed_model": joblib.load(MODEL_PATH + "speed_classifier_model.joblib"),
         "direction_model": joblib.load(MODEL_PATH + "direction_classifier_model.joblib"),
-        "scaler": joblib.load(MODEL_PATH + "speed_model_scaler.joblib"),
+        "area_scaler": joblib.load(MODEL_PATH + "area_model_scaler_v3.joblib"),
+        "speed_scaler": joblib.load(MODEL_PATH + "speed_model_scaler.joblib"),
     }
-    with open(MODEL_PATH + "area_model_columns.json") as f:
+    with open(MODEL_PATH + "area_model_columns_v3.json") as f:
         models["area_cols"] = json.load(f)
     with open(MODEL_PATH + "speed_model_columns.json") as f:
         models["speed_cols"] = json.load(f)
@@ -38,6 +40,9 @@ def load_models():
         models["direction_cols"] = json.load(f)
     return models
 
+MODELS = load_models()
+
+# --- 지리 정보 및 계절 피처 --- (이전과 동일)
 def get_gee_features(lat, lon):
     point = ee.Geometry.Point([lon, lat])
     today = datetime.date.today()
@@ -100,72 +105,102 @@ def add_season_flags(timestamp):
         "is_winter": int(month in [12, 1, 2]),
     }
 
-def prepare_features(df, models):
-    df = df.copy()
-    for category, key in [("area", "area_cols"), ("speed", "speed_cols"), ("direction", "direction_cols")]:
-        expected = set(models[key])
-        actual = set(df.columns)
-        if not expected.issubset(actual):
-            missing = sorted(list(expected - actual))
-            raise ValueError(f"{category} 모델에 필요한 컬럼이 누락됨: {missing}")
+# --- 좌표 이동 함수 ---
+def move_coordinate(lat, lon, distance_m, bearing_deg):
+    R = 6378137  # 지구 반지름 (미터)
+    d = distance_m
+    brng = math.radians(bearing_deg)
+    lat1 = math.radians(lat)
+    lon1 = math.radians(lon)
 
-    area_input = df[models["area_cols"]].copy().fillna(0)
-    speed_input = df[models["speed_cols"]].copy().fillna(0)
-    direction_input = df[models["direction_cols"]].copy().fillna(0)
-    speed_scaled = models["scaler"].transform(speed_input)
-    return area_input, speed_scaled, direction_input
+    lat2 = math.asin(math.sin(lat1) * math.cos(d / R) +
+                     math.cos(lat1) * math.sin(d / R) * math.cos(brng))
+    lon2 = lon1 + math.atan2(math.sin(brng) * math.sin(d / R) * math.cos(lat1),
+                           math.cos(d / R) - math.sin(lat1) * math.sin(lat2))
 
-def predict(input_json):
-    lat = input_json["latitude"]
-    lon = input_json["longitude"]
-    timestamp = datetime.datetime.fromisoformat(input_json["timestamp"])
-    duration_hours = input_json.get("durationHours", 1)
+    return math.degrees(lat2), math.degrees(lon2)
 
-    base = {
-        "startyear": timestamp.year,
-        "startmonth": timestamp.month,
-        "startday": timestamp.day
-    }
-
-    weather = fetch_all_weather_features(lat, lon, timestamp)
+# --- 단일 시간 단계 예측 함수 ---
+def predict_single_timestep(lat, lon, timestamp):
+    base = {"startyear": timestamp.year, "startmonth": timestamp.month, "startday": timestamp.day}
+    weather = fetch_all_weather_features(lat, lon, timestamp, offset_days=4)
     gee = get_gee_features(lat, lon)
-    fwi = fwi_calc(
-        T=weather.get("T2M_0h", 20),
-        RH=weather.get("RH2M_0h", 40),
-        W=weather.get("WS10M_0h", 3),
-        P=weather.get("PRECTOTCORR_0h", 0),
-        month=timestamp.month
-    )
+    season = add_season_flags(timestamp)
 
-    season_flags = add_season_flags(timestamp)
-
-    all_features = {**base, **weather, **gee, **fwi, **season_flags}
+    all_features = {**base, **gee, **season, **weather}
     df = pd.DataFrame([all_features])
 
-    models = load_models()
-    area_input, speed_input, direction_input = prepare_features(df, models)
+    # 피처 준비
+    area_input = df[MODELS["area_cols"]].copy().fillna(0)
+    speed_input = df[MODELS["speed_cols"]].copy().fillna(0)
+    direction_input = df[MODELS["direction_cols"]].copy().fillna(0)
 
-    area_log = models["area_model"].predict(area_input)[0]
+    area_scaled = MODELS["area_scaler"].transform(area_input)
+    speed_scaled = MODELS["speed_scaler"].transform(speed_input)
+
+    # 예측
+    area_log = MODELS["area_model"].predict(area_scaled)[0]
     area = float(np.expm1(area_log))
-    if not np.isfinite(area) or area < 0:
-        area = 0.0
+    if not np.isfinite(area) or area < 0: area = 0.0
 
-    spread_distance_m = float(np.sqrt(area * 10000 / np.pi))
-    speed_category = int(models["speed_model"].predict(speed_input)[0])
-    direction_class = str(models["direction_model"].predict(direction_input)[0])
+    spread_dist_m = float(np.sqrt(area * 10000 / np.pi)) # 1시간 동안의 확산 거리
+    speed_cat = int(MODELS["speed_model"].predict(speed_scaled)[0])
+    direction_class = str(MODELS["direction_model"].predict(direction_input)[0])
 
     return {
-        "damage_area": area,
-        "spread_speed_category": speed_category,
+        "hourly_damage_area": area,
+        "spread_speed_category": speed_cat,
         "spread_direction": direction_class,
-        "predicted_distance_m": spread_distance_m,
+        "predicted_distance_m": spread_dist_m,
         "wind_direction_deg": float(weather.get("WD10M_0h", -999))
+    }
+
+# --- 시뮬레이션 예측 함수 ---
+def predict_simulation(input_json):
+    current_lat = input_json["latitude"]
+    current_lon = input_json["longitude"]
+    start_timestamp = datetime.datetime.fromisoformat(input_json["timestamp"])
+    simulation_hours = input_json.get("durationHours", 1)
+
+    total_damage_area = 0
+    path_trace = []
+
+    for hour in range(simulation_hours):
+        current_timestamp = start_timestamp + datetime.timedelta(hours=hour)
+        
+        # 현재 시간 단계 예측
+        timestep_result = predict_single_timestep(current_lat, current_lon, current_timestamp)
+        
+        total_damage_area += timestep_result["hourly_damage_area"]
+        
+        # 다음 시간 단계의 위치 계산
+        distance_m = timestep_result["predicted_distance_m"]
+        direction_deg = float(timestep_result["wind_direction_deg"]) # 풍향을 확산 방향으로 가정
+        
+        path_trace.append({
+            "hour": hour + 1,
+            "lat": current_lat,
+            "lon": current_lon,
+            "hourly_damage_area": timestep_result["hourly_damage_area"],
+            "cumulative_damage_area": total_damage_area,
+            "wind_direction_deg": direction_deg
+        })
+
+        # 다음 위치로 이동
+        current_lat, current_lon = move_coordinate(current_lat, current_lon, distance_m, direction_deg)
+
+    return {
+        "simulation_hours": simulation_hours,
+        "final_damage_area": total_damage_area,
+        "final_lat": current_lat,
+        "final_lon": current_lon,
+        "path_trace": path_trace
     }
 
 if __name__ == "__main__":
     try:
         input_data = json.loads(sys.stdin.read())
-        result = predict(input_data)
-        print(json.dumps(result))
+        result = predict_simulation(input_data)
+        print(json.dumps(result, indent=2))
     except Exception as e:
-        print(json.dumps({"error": f"예측 실패: {str(e)}"}))
+        print(json.dumps({"error": f"예측 실패: {str(e)}", "traceback": traceback.format_exc()}))

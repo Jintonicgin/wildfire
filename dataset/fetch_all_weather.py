@@ -12,12 +12,16 @@ def fetch_nasa_hourly_weather(lat, lng, yyyymmdd, hour_str, max_retry=3):
         "parameters=T2M,RH2M,WS2M,WD2M,PRECTOTCORR,PS,ALLSKY_SFC_SW_DWN,WS10M,WD10M"
         f"&community=RE&longitude={lng}&latitude={lat}&start={yyyymmdd}&end={yyyymmdd}&format=JSON"
     )
+
     for attempt in range(max_retry):
         try:
             res = requests.get(url, timeout=30)
             res.raise_for_status()
-            data = res.json().get("properties", {}).get("parameter", {})
+            raw_data = res.json()
+            data = raw_data.get("properties", {}).get("parameter", {})
+
             hour_key = f"{yyyymmdd}{hour_str.zfill(2)}"
+
             result = {
                 "T2M": data.get("T2M", {}).get(hour_key, np.nan),
                 "RH2M": data.get("RH2M", {}).get(hour_key, np.nan),
@@ -81,54 +85,81 @@ def make_time_points(start_dt, end_dt, interval_hours=3):
         points.append(end_dt)
     return points
 
-def fetch_all_weather_features(lat, lon, timestamp):
-    end_dt = timestamp - datetime.timedelta(days=3)
+def fetch_all_weather_features(lat, lon, timestamp, offset_days=4):
+    # timestamp에서 offset_days만큼 과거로 이동
+    adjusted_timestamp = timestamp - datetime.timedelta(days=offset_days)
+
+    end_dt = adjusted_timestamp - datetime.timedelta(days=3)
     start_dt = end_dt - datetime.timedelta(hours=6)
 
     precip_feats = make_precip_features(lat, lon, end_dt)
     weather_list = []
     time_points = make_time_points(start_dt, end_dt, interval_hours=3)
+    
+    DEFAULTS = {
+        "T2M": 15.0, "RH2M": 50.0, "WS2M": 1.5, "WD2M": 180.0,
+        "WS10M": 2.0, "WD10M": 180.0, "PRECTOTCORR": 0.0, "PS": 101.3,
+        "ALLSKY_SFC_SW_DWN": 0.0
+    }
+
     for dt in time_points:
         yyyymmdd = dt.strftime("%Y%m%d")
         hour_str = dt.strftime("%H")
         w = fetch_nasa_hourly_weather(lat, lon, yyyymmdd, hour_str)
+        
+        last_w = weather_list[-1] if weather_list else {}
+
+        for key in DEFAULTS.keys():
+            if np.isnan(w.get(key, np.nan)):
+                fallback_key = None
+                if key == 'WD10M': fallback_key = 'WD2M'
+                elif key == 'WD2M': fallback_key = 'WD10M'
+                elif key == 'WS10M': fallback_key = 'WS2M'
+                elif key == 'WS2M': fallback_key = 'WS10M'
+
+                if fallback_key and not np.isnan(w.get(fallback_key, np.nan)):
+                    w[key] = w[fallback_key]
+                elif not np.isnan(last_w.get(key, np.nan)):
+                    w[key] = last_w[key]
+                else:
+                    w[key] = DEFAULTS[key]
+        
+        for key in DEFAULTS.keys():
+            if isinstance(w.get(key), np.number):
+                w[key] = float(w[key])
+
         w["dt"] = dt.strftime("%Y-%m-%d %H:%M")
         weather_list.append(w)
-
-    summary_feats = {}
-    for var in ["T2M", "RH2M", "WS2M", "WD2M", "WS10M", "WD10M", "PRECTOTCORR", "PS", "ALLSKY_SFC_SW_DWN"]:
-        arr = np.array([x[var] for x in weather_list if var in x and x[var] is not None], dtype=float)
-        summary_feats[f"{var}_mean"] = float(np.nanmean(arr)) if arr.size else -999
-        summary_feats[f"{var}_max"] = float(np.nanmax(arr)) if arr.size else -999
-        summary_feats[f"{var}_min"] = float(np.nanmin(arr)) if arr.size else -999
-        if "0h" not in var:
-            summary_feats[f"{var}_0h"] = float(weather_list[-1].get(var, -999))
 
     target_weather = next((w for w in weather_list if "00:00" in w["dt"]), weather_list[0])
 
     fwi = fwi_calc(
-        T=target_weather["T2M"],
-        RH=target_weather["RH2M"],
-        W=target_weather["WS10M"],
-        P=target_weather["PRECTOTCORR"],
+        T=target_weather.get("T2M", 20),
+        RH=target_weather.get("RH2M", 40),
+        W=target_weather.get("WS10M", 3),
+        P=target_weather.get("PRECTOTCORR", 0),
         month=end_dt.month
     )
 
-    fwi_feats = {f"{k}_0h": round(float(v), 2) for k, v in fwi.items()}
+    # FWI 피처 (접미사 없음)
+    fwi_no_suffix = {k: round(float(v), 2) for k, v in fwi.items()}
+
+    # FWI 피처 (_0h 접미사 있음)
+    fwi_with_suffix = {f"{k}_0h": round(float(v), 2) for k, v in fwi.items()}
 
     derived = {
-        "dry_windy_combo": int(target_weather["RH2M"] < 35 and target_weather["WS10M"] > 5),
-        "fuel_combo": float(fwi["FFMC"] * fwi["ISI"]),
-        "potential_spread_index": float(fwi["ISI"] * fwi["FWI"]),
+        "dry_windy_combo": int(target_weather.get("RH2M", 0) < 35 and target_weather.get("WS10M", 0) > 5),
+        "fuel_combo": float(fwi_no_suffix.get("FFMC", 0) * fwi_no_suffix.get("ISI", 0)),
+        "potential_spread_index": float(fwi_no_suffix.get("ISI", 0) * fwi_no_suffix.get("FWI", 0)),
         "terrain_var_effect": 0.0,
-        "wind_steady_flag": int(summary_feats["WS10M_max"] - summary_feats["WS10M_min"] < 1.5),
+        "wind_steady_flag": int(np.nanmax([w.get("WS10M", 0) for w in weather_list]) - np.nanmin([w.get("WS10M", 0) for w in weather_list]) < 1.5),
         "dry_to_rain_ratio_30d": (
-            precip_feats.get("dry_days_30d_start", 0) / max(precip_feats.get("total_precip_30d_start", 1e-2))
+            precip_feats.get("dry_days_30d_start", 0) / 
+            max(precip_feats.get("total_precip_30d_start", 0), 1e-2)
         ),
         "ndvi_stress": 0.6
     }
 
-    # ✅ 계절 구분 변수 추가
     month = end_dt.month
     season_flags = {
         "is_spring": int(month in [3, 4, 5]),
@@ -144,9 +175,30 @@ def fetch_all_weather_features(lat, lon, timestamp):
         "end_dt": end_dt.strftime("%Y-%m-%d %H:%M"),
         "duration_hours": round((end_dt - start_dt).total_seconds() / 3600, 2),
         "weather_timeseries": weather_list,
+        
+        # 현재 시점의 날씨 피처 (접미사 없음)
+        "T2M": target_weather.get("T2M", -999),
+        "RH2M": target_weather.get("RH2M", -999),
+        "WS10M": target_weather.get("WS10M", -999),
+        "WD10M": target_weather.get("WD10M", -999),
+        "PRECTOTCORR": target_weather.get("PRECTOTCORR", -999),
+        "PS": target_weather.get("PS", -999),
+        "ALLSKY_SFC_SW_DWN": target_weather.get("ALLSKY_SFC_SW_DWN", -999),
+
+        # 현재 시점의 날씨 피처 (_0h 접미사 있음)
+        "T2M_0h": target_weather.get("T2M", -999),
+        "RH2M_0h": target_weather.get("RH2M", -999),
+        "WS2M_0h": target_weather.get("WS2M", -999),
+        "WD2M_0h": target_weather.get("WD2M", -999),
+        "WS10M_0h": target_weather.get("WS10M", -999),
+        "WD10M_0h": target_weather.get("WD10M", -999),
+        "PRECTOTCORR_0h": target_weather.get("PRECTOTCORR", -999),
+        "PS_0h": target_weather.get("PS", -999),
+        "ALLSKY_SFC_SW_DWN_0h": target_weather.get("ALLSKY_SFC_SW_DWN", -999),
+
         **precip_feats,
-        **summary_feats,
-        **fwi_feats,
+        **fwi_no_suffix,
+        **fwi_with_suffix,
         **derived,
         **season_flags,
         "success": True

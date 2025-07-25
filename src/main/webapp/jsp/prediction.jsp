@@ -22,6 +22,32 @@
 <body>
 <div class="container">
     <jsp:include page="header.jsp" />
+    
+    <section id="region-select-wrapper" class="region-select">
+    <label for="city">지역 선택:</label>
+    <select id="city" name="city" placeholder="지역 선택" autocomplete="off">
+      <option value="">시/군 선택</option>
+      <option value="강릉시">강릉시</option>
+      <option value="고성군">고성군</option>
+      <option value="동해시">동해시</option>
+      <option value="삼척시">삼척시</option>
+      <option value="속초시">속초시</option>
+      <option value="양구군">양구군</option>
+      <option value="양양군">양양군</option>
+      <option value="영월군">영월군</option>
+      <option value="원주시">원주시</option>
+      <option value="인제군">인제군</option>
+      <option value="정선군">정선군</option>
+      <option value="철원군">철원군</option>
+      <option value="춘천시">춘천시</option>
+      <option value="태백시">태백시</option>
+      <option value="평창군">평창군</option>
+      <option value="홍천군">홍천군</option>
+      <option value="화천군">화천군</option>
+      <option value="횡성군">횡성군</option>
+    </select>
+    <button id="confirmBtn" class="filter-button">선택 완료</button>
+  </section>
 
     <div class="prediction-container">
 
@@ -36,7 +62,7 @@
                 </label>
                 <label>경도:
                     <input type="text" id="longitude" name="longitude" readonly>
-                </label>
+                    </label>
             </div>
 
             <div class="time-group">
@@ -48,8 +74,8 @@
                         <option value="9">9시간 후</option>
                         <option value="12">12시간 후</option>
                     </select>
-                </label>
-            </div>
+                    </label>
+             </div>
 
             <button type="submit" id="predictBtn">🔥 예측 실행</button>
         </form>
@@ -75,7 +101,7 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script src="/WildFire/js/prediction.js"></script>
-
+<script src="/WildFire/js/predictionMap.js"></script>
 <!-- ✅ 로그인 상태를 JS 전역 변수로 전달 -->
 <script>
     window.isLoggedIn = <%= isLoggedIn %>;
