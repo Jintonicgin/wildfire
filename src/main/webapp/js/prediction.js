@@ -1,26 +1,27 @@
-let map;
 
+let map;
 let currentPolygon = null;
 let currentArrow = null;
 let currentLabel = null;
 let infoOverlay = null;
 
 document.addEventListener("DOMContentLoaded", function () {
-    new TomSelect("#forecastHour", {
+    // TomSelect 인스턴스를 변수에 저장
+    const hourSelect = new TomSelect("#forecastHour", {
         create: false,
         allowEmptyOption: true,
         controlInput: false,
         sortField: [],
-        maxOptions: 4,
+        maxOptions: 3,
         placeholder: "예측 시간 선택"
     });
-    new TomSelect("#city", {
+    const citySelect = new TomSelect("#city", {
         create: false,
         allowEmptyOption: true,
         controlInput: false,
         sortField: [],
-        maxOptions: 18,
-        placeholder: "지역 선택"
+        maxOptions: 19,
+        placeholder: "시/군 선택"
     });
 
     kakao.maps.load(function () {
@@ -49,6 +50,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             document.getElementById('latitude').value = lat.toFixed(6);
             document.getElementById('longitude').value = lng.toFixed(6);
+            
+            citySelect.clear();
         });
     });
 
@@ -56,20 +59,15 @@ document.addEventListener("DOMContentLoaded", function () {
         e.preventDefault();
 
         if (!window.isLoggedIn) {
-            e.preventDefault();
             alert("로그인 후 이용하실 수 있습니다.");
             window.location.href = "/WildFire/jsp/login.jsp";
             return;
         }
 
+        const region = citySelect.getValue();
         const lat = parseFloat(document.getElementById('latitude').value);
         const lng = parseFloat(document.getElementById('longitude').value);
-        const hour = parseInt(document.getElementById('forecastHour').value);
-
-        if (isNaN(lat) || isNaN(lng)) {
-            alert("지도를 클릭하여 위치를 먼저 선택해주세요.");
-            return;
-        }
+        const hour = parseInt(hourSelect.getValue());
 
         if (isNaN(hour)) {
             alert("예측 시간을 선택해주세요.");
@@ -80,17 +78,27 @@ document.addEventListener("DOMContentLoaded", function () {
         const future = new Date(now.getTime() + hour * 3600 * 1000);
         const timestamp = future.toISOString().split('.')[0];
 
+        let inputData = {
+            timestamp: timestamp,
+            durationHours: hour
+        };
+
+        if (region) {
+            inputData.city_name = region;
+        } else if (!isNaN(lat) && !isNaN(lng)) {
+            inputData.latitude = lat;
+            inputData.longitude = lng;
+        } else {
+            alert("지역을 선택하거나 지도에서 위치를 클릭해주세요.");
+            return;
+        }
+
         showLoading(true);
 
         fetch('/WildFire/PredictionServlet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                latitude: lat,
-                longitude: lng,
-                timestamp: timestamp,
-                durationHours: hour
-            })
+            body: JSON.stringify(inputData)
         })
         .then(res => res.text())
         .then(text => {
@@ -104,30 +112,50 @@ document.addEventListener("DOMContentLoaded", function () {
                     console.error(data.details || data.error);
                     return;
                 }
+                
+                const startLat = region ? data.path_trace[0].lat : lat;
+                const startLng = region ? data.path_trace[0].lon : lng;
 
-				document.getElementById('predictedDamageArea').textContent =
-				   data.final_damage_area.toFixed(2) + " ha"; // final_damage_area 사용
-				   
-				   const lastPathTrace = data.path_trace[data.path_trace.length - 1];
-				   const direction = convertDegreeToDirection(lastPathTrace.wind_direction_deg); // path_trace에서 풍향 가져오기
-				  
-				   const speedValue = calculateDistance(lat, lng, data.final_lat, data.final_lon);
-				   const speed = speedValue.toFixed(2) + " m";
-				  
-				   const directionContainer = document.getElementById('predictedSpreadDirection');
-				   directionContainer.innerHTML = ''; 
-				   const arrow = document.createElement('div');
-				   arrow.classList.add('direction-arrow', 'dir-' + direction);
-				   directionContainer.appendChild(arrow);
-				  
-				   const infoText = document.createElement('div');
-				   infoText.textContent = `${direction} 방향 / 거리: ${speed}`;
-				   infoText.style.marginTop = '5px';
-				   directionContainer.appendChild(infoText);
+                document.getElementById('predictedDamageArea').textContent =
+                    data.final_damage_area.toFixed(2) + " ha";
 
-				   drawDamageEllipse(map, lat, lng, speedValue, hour, direction, data.final_damage_area); // final_damage_area 사용
-				   addDirectionArrowOnMap(map, lat, lng, direction);
-				   addPredictionLabelOnMap(map, lat, lng, data.final_damage_area, direction, speedValue); // final_damage_area 사용
+                const lastPathTrace = data.path_trace[data.path_trace.length - 1];
+                const direction = convertDegreeToDirection(lastPathTrace.wind_direction_deg);
+
+                let totalDistance;
+          
+                if (region) {
+           
+                    const area_m2 = data.final_damage_area * 10000;
+                    const aspectRatio = 0.6; 
+                    const b = Math.sqrt(area_m2 / (Math.PI * aspectRatio));
+                    const a = b / aspectRatio; 
+                    totalDistance = a;
+                } else {
+                    totalDistance = calculateDistance(startLat, startLng, data.final_lat, data.final_lon);
+                }
+
+                const speedValue = totalDistance / hour;
+                const speedCategory = classifySpeed(speedValue);
+
+                const directionContainer = document.getElementById('predictedSpreadDirection');
+                directionContainer.innerHTML = ''; 
+                const arrow = document.createElement('div');
+                arrow.classList.add('direction-arrow', 'dir-' + direction);
+                directionContainer.appendChild(arrow);
+
+                const infoText = document.createElement('div');
+                infoText.innerHTML = `
+                    확산 방향: ${direction}<br/>
+                    확산 거리: ${totalDistance.toFixed(2)} m<br/>
+                    확산 속도: ${speedValue.toFixed(2)} m/h (${speedCategory})
+                `;
+                infoText.style.marginTop = '5px';
+                directionContainer.appendChild(infoText);
+
+                drawDamageEllipse(map, startLat, startLng, totalDistance, hour, direction, data.final_damage_area);
+                addDirectionArrowOnMap(map, startLat, startLng, direction);
+                addPredictionLabelOnMap(map, startLat, startLng, data.final_damage_area, direction, totalDistance, speedValue, speedCategory);
 
             } catch (e) {
                 console.error("❌ JSON 파싱 오류:", e);
@@ -146,39 +174,41 @@ document.addEventListener("DOMContentLoaded", function () {
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) {
             overlay.classList.toggle('hidden', !show);
-        } else {
-            console.warn("❗ loadingOverlay 요소가 없습니다.");
         }
     }
-	
-	function calculateDistance(lat1, lon1, lat2, lon2) {
-	    const R = 6371e3; // metres
-	    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
-	    const φ2 = lat2 * Math.PI / 180;
-	    const Δφ = (lat2 - lat1) * Math.PI / 180;
-	    const Δλ = (lon2 - lon1) * Math.PI / 180;
-	    
-	    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-	   Math.cos(φ1) * Math.cos(φ2) *
-	   Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-	   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-	   
-	   const d = R * c; // in metres
-	   return d;
-	   }
 
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        if (lat1 === -999 || lon1 === -999) return 0; // DB 데이터에 위경도 없을 경우
+        const R = 6371e3;
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
 
     function convertDegreeToDirection(deg) {
         if (deg === -999 || deg === null || deg === undefined || isNaN(deg)) return 'N';
         const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-        const index = Math.round(((deg %= 360) < 0 ? deg + 360 : deg) / 45) % 8;
+        const index = Math.floor(((deg + 22.5) % 360) / 45);
         return dirs[index];
+    }
+
+    function classifySpeed(speed) {
+        if (speed < 100) return "느림";
+        if (speed < 300) return "보통";
+        return "빠름";
     }
 
     function drawDamageEllipse(map, startLat, startLng, speed, durationHours, direction, damageArea) {
         if (currentPolygon) currentPolygon.setMap(null);
         if (infoOverlay) infoOverlay.setMap(null);
-
+        if (startLat === -999 || startLng === -999) return; 
         const directionAngles = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315 };
         const angle = (directionAngles[direction] || 0) * Math.PI / 180;
 
@@ -208,11 +238,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const xr = x * Math.cos(angle) - y * Math.sin(angle);
             const yr = x * Math.sin(angle) + y * Math.cos(angle);
 
-            const dLat = yr / R;
-            const dLng = xr / (R * Math.cos(centerLat * Math.PI / 180));
+            const dLat_point = yr / R;
+            const dLng_point = xr / (R * Math.cos(centerLat * Math.PI / 180));
 
-            const newLat = centerLat + dLat * (180 / Math.PI);
-            const newLng = centerLng + dLng * (180 / Math.PI);
+            const newLat = centerLat + dLat_point * (180 / Math.PI);
+            const newLng = centerLng + dLng_point * (180 / Math.PI);
 
             coords.push(new kakao.maps.LatLng(newLat, newLng));
         }
@@ -232,6 +262,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function addDirectionArrowOnMap(map, lat, lng, direction) {
         if (currentArrow) currentArrow.setMap(null);
+        if (lat === -999 || lng === -999) return;
 
         const angleMap = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315 };
         const angle = angleMap[direction] || 0;
@@ -254,8 +285,9 @@ document.addEventListener("DOMContentLoaded", function () {
         currentArrow.setMap(map);
     }
 
-    function addPredictionLabelOnMap(map, lat, lng, damageArea, direction, speed) {
+    function addPredictionLabelOnMap(map, lat, lng, damageArea, direction, totalDistance, speedValue, speedCategory) {
         if (currentLabel) currentLabel.setMap(null);
+        if (lat === -999 || lng === -999) return;
 
         const directionAngles = {
             N: 0, NE: 45, E: 90, SE: 135,
@@ -289,8 +321,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 color: #333;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             ">
-                피해 면적:  <strong>${damageArea.toFixed(2)} ha</strong><br/>
-                확산 방향:️ <strong>${direction}</strong> / 확산 거리:  <strong>${speed.toFixed(2)} m</strong>
+                피해 면적: <strong>${damageArea.toFixed(2)} ha</strong><br/>
+                확산 방향: <strong>${direction}</strong><br/>
+                확산 거리: <strong>${totalDistance.toFixed(2)} m</strong><br/>
+                확산 속도: <strong>${speedValue.toFixed(2)} m/h</strong> (${speedCategory})
             </div>
         `;
 

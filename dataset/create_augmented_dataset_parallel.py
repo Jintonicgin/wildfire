@@ -15,8 +15,8 @@ except ImportError:
     sys.exit(1)
 
 # --- 설정 ---
-SOURCE_DATA_PATH = "gangwon_fire_data_full_merged.csv"
-OUTPUT_DATA_PATH = "gangwon_fire_data_augmented_parallel.csv"
+SOURCE_DATA_PATH = "final_merged_feature_engineered.csv"
+OUTPUT_DATA_PATH = "gangwon_fire_data_augmented_parallel02.csv"
 API_DELAY = 0.1 # 병렬 처리 시에는 지연을 줄일 수 있습니다.
 MAX_WORKERS = 8   # 동시에 실행할 프로세스 수 (CPU 코어 수에 맞게 조절)
 

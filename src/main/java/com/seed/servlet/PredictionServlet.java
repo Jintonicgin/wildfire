@@ -6,11 +6,20 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 import javax.servlet.annotation.*;
 import java.io.*;
+import java.sql.*;
 
 @WebServlet("/PredictionServlet")
 public class PredictionServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
+
+    private static final String ORACLE_URL = "jdbc:oracle:thin:@localhost:1521:xe";
+    private static final String ORACLE_USER = "wildfire";
+    private static final String ORACLE_PASS = "1234";
+    private static final String PYTHON_EXE = "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3";
+    private static final String SCRIPT_PATH = "/Users/mmymacymac/Developer/Projects/eclipse/WildFire/dataset/";
+    private static final String SCRIPT_REALTIME = SCRIPT_PATH + "predict.py";
+    private static final String SCRIPT_FROM_DB = SCRIPT_PATH + "predict_from_feature.py";
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -20,43 +29,51 @@ public class PredictionServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        // ✅ CORS 허용
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "POST");
-        response.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
         PrintWriter out = response.getWriter();
 
         try {
-            // ✅ 1. 요청 JSON 파싱
             StringBuilder sb = new StringBuilder();
-            BufferedReader reader = request.getReader();
             String line;
-            while ((line = reader.readLine()) != null) {
+            while ((line = request.getReader().readLine()) != null) {
                 sb.append(line);
             }
-
             JSONObject jsonRequest = new JSONObject(sb.toString());
 
-            // ✅ 2. Python 실행 및 결과 수신
-            String resultJson = runPythonPrediction(jsonRequest);
+            String scriptToRun;
+            JSONObject scriptInput;
 
-            if (resultJson == null || resultJson.isEmpty()) {
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                JSONObject error = new JSONObject();
-                error.put("error", "Python 예측 결과가 비어 있습니다.");
-                out.print(error.toString());
+            if (jsonRequest.has("city_name")) {
+                String city = jsonRequest.getString("city_name");
+                JSONObject featuresFromDB = loadFeaturesFromDB(city);
+
+                if (featuresFromDB == null) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print(new JSONObject().put("error", "DB에서 해당 도시 데이터를 찾을 수 없습니다. (Table: REGION_PREDICTION_FEATURES)"));
+                    return;
+                }
+                
+                featuresFromDB.put("durationHours", jsonRequest.getInt("durationHours"));
+                featuresFromDB.put("timestamp", jsonRequest.getString("timestamp"));
+                
+                scriptToRun = SCRIPT_FROM_DB;
+                scriptInput = featuresFromDB;
+
+            } else if (jsonRequest.has("latitude") && jsonRequest.has("longitude")) {
+                scriptToRun = SCRIPT_REALTIME;
+                scriptInput = jsonRequest;
+
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print(new JSONObject().put("error", "요청에 필요한 정보(city_name 또는 lat/lng)가 없습니다."));
                 return;
             }
 
-            // ✅ 3. 결과 응답
-            out.print(resultJson);
+            String result = runPythonScript(scriptToRun, scriptInput);
+            out.print(result);
 
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            JSONObject error = new JSONObject();
-            error.put("error", "서버 처리 중 예외 발생: " + e.toString());
-            out.print(error.toString());
+            out.print(new JSONObject().put("error", "서버 처리 중 예외 발생: " + e.toString()));
             e.printStackTrace();
         } finally {
             out.flush();
@@ -64,72 +81,70 @@ public class PredictionServlet extends HttpServlet {
         }
     }
 
+    private JSONObject loadFeaturesFromDB(String city) {
+        try {
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+            try (Connection conn = DriverManager.getConnection(ORACLE_URL, ORACLE_USER, ORACLE_PASS)) {
+                String sql = "SELECT * FROM REGION_PREDICTION_FEATURES WHERE REGION_NAME = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, city);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            ResultSetMetaData meta = rs.getMetaData();
+                            JSONObject obj = new JSONObject();
+                            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                String key = meta.getColumnName(i).toLowerCase();
+                                Object val = rs.getObject(i);
+                                if (val == null) {
+                                    obj.put(key, JSONObject.NULL);
+                                } else if (val instanceof Number || val instanceof Boolean) {
+                                    obj.put(key, val);
+                                } else {
+                                    obj.put(key, val.toString());
+                                }
+                            }
+                            return obj;
+                        }
+                    }
+                }
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private String runPythonScript(String scriptPath, JSONObject inputJson) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(PYTHON_EXE, scriptPath);
+        pb.redirectErrorStream(false);
+        Process process = pb.start();
+
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()))) {
+            writer.write(inputJson.toString());
+        }
+
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line);
+            }
+        }
+
+        StringBuilder errorOutput = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                errorOutput.append(line);
+            }
+        }
+        process.waitFor();
+        return output.toString();
+    }
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         doPost(request, response);
-    }
-
-    private String runPythonPrediction(JSONObject inputJson) {
-        try {
-            String pythonExecutable = "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3";
-            String scriptPath = "/Users/mmymacymac/Developer/Projects/eclipse/WildFire/dataset/predict.py";
-
-            File scriptFile = new File(scriptPath);
-            if (!scriptFile.exists()) {
-                JSONObject error = new JSONObject();
-                error.put("error", "Python 스크립트를 찾을 수 없습니다.");
-                return error.toString();
-            }
-
-            ProcessBuilder pb = new ProcessBuilder(pythonExecutable, scriptPath);
-            pb.redirectErrorStream(true);  // stderr도 stdout으로 함께 읽음
-            Process process = pb.start();
-
-            // ✅ JSON 입력값을 stdin으로 전달
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
-            writer.write(inputJson.toString());
-            writer.flush();
-            writer.close();
-
-            // ✅ stdout 결과 읽기
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-
-            int exitCode = process.waitFor();
-            String fullOutput = output.toString().trim();
-
-            // ✅ Python stdout 디버깅 출력
-            System.err.println("[Python output start]");
-            System.err.println(fullOutput);
-            System.err.println("[Python output end]");
-
-            // ✅ JSON 블록만 추출
-            int start = fullOutput.indexOf("{");
-            int end = fullOutput.lastIndexOf("}") + 1;
-
-            if (start == -1 || end == -1 || start >= end) {
-                JSONObject error = new JSONObject();
-                error.put("error", "Python 결과에서 유효한 JSON을 추출하지 못했습니다.");
-                error.put("raw_output", fullOutput);
-                return error.toString();
-            }
-
-            String jsonOnly = fullOutput.substring(start, end);
-
-            // ✅ JSON 유효성 검증
-            new JSONObject(jsonOnly);
-            return jsonOnly;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            JSONObject error = new JSONObject();
-            error.put("error", "서블릿 예외 발생: " + e.toString());
-            return error.toString();
-        }
     }
 }

@@ -15,16 +15,6 @@
 </head>
 <body>
 
-<!-- Intro Screen -->
-<div class="intro-screen">
-  <img src="/WildFire/img/logo_leaf.png" alt="로고" class="intro-logo">
-  <div class="intro-text-wrapper">
-    <div class="intro-text" id="type-text"></div>
-    <div class="intro-subtitle" id="type-sub" style="visibility: hidden;"></div>
-  </div>
-  <button class="intro-start-btn" id="enterBtn" style="display: none;">시작하기</button>
-</div>
-
 <!-- Main Container -->
 <div class="container">
   <jsp:include page="header.jsp" />

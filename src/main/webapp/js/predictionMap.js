@@ -11,7 +11,6 @@ fetch("/WildFire/data/gangwondo_ssg.geojson")
     alert("경계 데이터를 불러오지 못했습니다.");
   });
 
-// ✅ 선택 완료 시 경계 표시
 document.getElementById("confirmBtn").addEventListener("click", () => {
   const selectedCity = document.getElementById("city").value.trim();
 
@@ -74,13 +73,12 @@ document.getElementById("confirmBtn").addEventListener("click", () => {
     strokeStyle: "solid",
   });
 
-  polygonOverlay.setMap(map); // ✅ 여기서 prediction.js의 전역 map 사용
+  polygonOverlay.setMap(map); 
 
   const bounds = new kakao.maps.LatLngBounds();
   paths.forEach((path) => path.forEach((point) => bounds.extend(point)));
   map.setBounds(bounds);
 
-  // 중심 계산 안전하게
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
   const centerLat = (sw.getLat() + ne.getLat()) / 2;
