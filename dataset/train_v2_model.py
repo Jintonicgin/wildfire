@@ -2,23 +2,18 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import RobustScaler
 import joblib
 import json
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-# --- 설정 ---
 SOURCE_DATA_PATH = "gangwon_fire_data_augmented_parallel.csv"
 MODEL_OUTPUT_PATH = "area_regressor_model_v2.joblib"
 COLUMNS_OUTPUT_PATH = "area_model_columns_v2.json"
 SCALER_OUTPUT_PATH = "area_model_scaler_v2.joblib"
 
-# --- 앙상블 클래스 정의 (전역 범위로 옮김) ---
 class EnsembleRegressor:
-    """여러 개의 회귀 모델을 평균하여 예측하는 간단한 앙상블 클래스."""
     def __init__(self, models):
         self.models = models
 
@@ -26,12 +21,10 @@ class EnsembleRegressor:
         preds = [model.predict(X) for model in self.models]
         return np.mean(np.column_stack(preds), axis=1)
 
-# --- 메인 실행 로직 ---
 def main():
-    print(f"1. 증강된 데이터 로딩: {SOURCE_DATA_PATH}")
+    print(f"1. 데이터 로딩: {SOURCE_DATA_PATH}")
     df = pd.read_csv(SOURCE_DATA_PATH)
 
-    print("2. 피처 엔지니어링 (duration 관련 피처 포함)")
     features = [
         'lat', 'lng',
         'duration_hours', 'total_duration_hours',
@@ -46,79 +39,84 @@ def main():
     X = df[features]
     y = np.log1p(df[target])
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     scaler = RobustScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    X_scaled = scaler.fit_transform(X)
 
-    print("3. 모델 훈련 시작")
-    xgb_model = xgb.XGBRegressor(random_state=42, n_jobs=-1, eval_metric='rmse')
-    rf_model = RandomForestRegressor(random_state=42, n_jobs=-1)
-    gb_model = GradientBoostingRegressor(random_state=42)
+    print("2. K-Fold 교차 검증 시작 (5 folds)")
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-    param_grid = {
-        'n_estimators': [200, 500],
-        'learning_rate': [0.01, 0.1],
-        'max_depth': [5, 7],
-        'subsample': [0.7],
-        'colsample_bytree': [0.8]
-    }
+    rmse_xgb, r2_xgb = [], []
+    rmse_rf, r2_rf = [], []
+    rmse_gb, r2_gb = [], []
+    rmse_ens, r2_ens = [], []
 
-    grid_search = GridSearchCV(
-        estimator=xgb_model,
-        param_grid=param_grid,
-        cv=3,
-        scoring='neg_mean_squared_error',
-        verbose=2,
-        n_jobs=-1
-    )
-    grid_search.fit(X_train_scaled, y_train)
-    best_xgb = grid_search.best_estimator_
+    for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
+        print(f"\n📂 Fold {fold + 1}")
+        X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
-    rf_model.fit(X_train_scaled, y_train)
-    gb_model.fit(X_train_scaled, y_train)
+        xgb_model = xgb.XGBRegressor(random_state=42, n_jobs=-1, eval_metric='rmse')
+        rf_model = RandomForestRegressor(random_state=42, n_jobs=-1)
+        gb_model = GradientBoostingRegressor(random_state=42)
 
-    y_pred_xgb = best_xgb.predict(X_test_scaled)
-    y_pred_rf = rf_model.predict(X_test_scaled)
-    y_pred_gb = gb_model.predict(X_test_scaled)
+        xgb_model.fit(X_train, y_train)
+        rf_model.fit(X_train, y_train)
+        gb_model.fit(X_train, y_train)
 
-    y_pred_xgb_orig = np.expm1(y_pred_xgb)
-    y_pred_rf_orig = np.expm1(y_pred_rf)
-    y_pred_gb_orig = np.expm1(y_pred_gb)
-    y_test_orig = np.expm1(y_test)
+        y_val_orig = np.expm1(y_val)
+        pred_xgb = np.expm1(xgb_model.predict(X_val))
+        pred_rf = np.expm1(rf_model.predict(X_val))
+        pred_gb = np.expm1(gb_model.predict(X_val))
 
-    ensemble_pred_orig = (y_pred_xgb_orig + y_pred_rf_orig + y_pred_gb_orig) / 3
+        rmse_x = np.sqrt(mean_squared_error(y_val_orig, pred_xgb))
+        r2_x = r2_score(y_val_orig, pred_xgb)
+        print(f"    XGB       - RMSE: {rmse_x:.4f}, R²: {r2_x:.4f}")
 
-    print("4. 모델 성능 평가")
-    print(f"  - XGB RMSE: {np.sqrt(mean_squared_error(y_test_orig, y_pred_xgb_orig)):.4f}, R^2: {r2_score(y_test_orig, y_pred_xgb_orig):.4f}")
-    print(f"  - RF   RMSE: {np.sqrt(mean_squared_error(y_test_orig, y_pred_rf_orig)):.4f}, R^2: {r2_score(y_test_orig, y_pred_rf_orig):.4f}")
-    print(f"  - GB   RMSE: {np.sqrt(mean_squared_error(y_test_orig, y_pred_gb_orig)):.4f}, R^2: {r2_score(y_test_orig, y_pred_gb_orig):.4f}")
-    print(f"  - Ensemble RMSE: {np.sqrt(mean_squared_error(y_test_orig, ensemble_pred_orig)):.4f}, R^2: {r2_score(y_test_orig, ensemble_pred_orig):.4f}")
+        rmse_r = np.sqrt(mean_squared_error(y_val_orig, pred_rf))
+        r2_r = r2_score(y_val_orig, pred_rf)
+        print(f"    RandomForest - RMSE: {rmse_r:.4f}, R²: {r2_r:.4f}")
 
-    print("5. 모델 및 스케일러 저장")
-    ensemble_model = EnsembleRegressor([best_xgb, rf_model, gb_model])
+        rmse_g = np.sqrt(mean_squared_error(y_val_orig, pred_gb))
+        r2_g = r2_score(y_val_orig, pred_gb)
+        print(f"    GB        - RMSE: {rmse_g:.4f}, R²: {r2_g:.4f}")
+
+        ensemble_pred = (pred_xgb + pred_rf + pred_gb) / 3
+        rmse_e = np.sqrt(mean_squared_error(y_val_orig, ensemble_pred))
+        r2_e = r2_score(y_val_orig, ensemble_pred)
+        print(f"    Ensemble  - RMSE: {rmse_e:.4f}, R²: {r2_e:.4f}")
+
+        rmse_xgb.append(rmse_x)
+        r2_xgb.append(r2_x)
+        rmse_rf.append(rmse_r)
+        r2_rf.append(r2_r)
+        rmse_gb.append(rmse_g)
+        r2_gb.append(r2_g)
+        rmse_ens.append(rmse_e)
+        r2_ens.append(r2_e)
+
+    print("\n📊 평균 성능 요약")
+    print(f"  - XGB       평균 RMSE: {np.mean(rmse_xgb):.4f}, R²: {np.mean(r2_xgb):.4f}")
+    print(f"  - RandomForest 평균 RMSE: {np.mean(rmse_rf):.4f}, R²: {np.mean(r2_rf):.4f}")
+    print(f"  - GB        평균 RMSE: {np.mean(rmse_gb):.4f}, R²: {np.mean(r2_gb):.4f}")
+    print(f"  - Ensemble  평균 RMSE: {np.mean(rmse_ens):.4f}, R²: {np.mean(r2_ens):.4f}")
+
+    print("\n3. 전체 데이터로 최종 모델 재학습")
+    final_xgb = xgb.XGBRegressor(random_state=42, n_jobs=-1, eval_metric='rmse')
+    final_rf = RandomForestRegressor(random_state=42, n_jobs=-1)
+    final_gb = GradientBoostingRegressor(random_state=42)
+
+    final_xgb.fit(X_scaled, y)
+    final_rf.fit(X_scaled, y)
+    final_gb.fit(X_scaled, y)
+
+    ensemble_model = EnsembleRegressor([final_xgb, final_rf, final_gb])
+
     joblib.dump(ensemble_model, MODEL_OUTPUT_PATH)
     joblib.dump(scaler, SCALER_OUTPUT_PATH)
     with open(COLUMNS_OUTPUT_PATH, 'w') as f:
         json.dump(features, f)
 
-    print("6. 시각화")
-    plt.figure(figsize=(10, 10))
-    plt.scatter(y_test_orig, ensemble_pred_orig, alpha=0.3)
-    plt.plot([y_test_orig.min(), y_test_orig.max()], [y_test_orig.min(), y_test_orig.max()], '--r')
-    plt.xlabel('Actual')
-    plt.ylabel('Predicted (Ensemble)')
-    plt.title('Actual vs Predicted Damage Area (Ensemble)')
-    plt.savefig('actual_vs_predicted_damage_area.png')
-
-    feature_importances = pd.DataFrame(best_xgb.feature_importances_, index=features, columns=['importance'])
-    feature_importances = feature_importances.sort_values('importance', ascending=False)
-
-    plt.figure(figsize=(12, 8))
-    sns.barplot(x=feature_importances.importance, y=feature_importances.index)
-    plt.title('XGBoost Feature Importance')
-    plt.tight_layout()
-    plt.savefig('feature_importance_v2.png')
+    print("✅ 최종 모델 및 스케일러 저장 완료")
 
 if __name__ == "__main__":
     main()

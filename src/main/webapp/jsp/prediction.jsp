@@ -24,7 +24,7 @@
     
     <section id="region-select-wrapper" class="region-select">
     <label for="city">지역 선택:</label>
-    <select id="city" name="city" placeholder="지역 선택" autocomplete="off">
+    <select id="city" name="city" placeholder="시/군 선택" autocomplete="off">
       <option value="">시/군 선택</option>
       <option value="강릉시">강릉시</option>
       <option value="고성군">고성군</option>
