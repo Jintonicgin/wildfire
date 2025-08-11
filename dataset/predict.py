@@ -24,6 +24,15 @@ class EnsembleRegressor:
     def predict(self, X):
         preds = [model.predict(X) for model in self.models]
         return np.mean(np.column_stack(preds), axis=1)
+        
+class EnsembleClassifier:
+    def __init__(self, models):
+        self.models = models
+
+    def predict(self, X):
+        preds = [model.predict(X) for model in self.models]
+        # 다수결 방식으로 예측
+        return np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=1, arr=np.column_stack(preds))
 
 MODELS = None
 _initialized = False
@@ -244,11 +253,17 @@ def predict_simulation(input_json):
     }
 
 if __name__ == "__main__":
-    _initialize_prediction_environment() 
     try:
-        input_data = json.loads(sys.stdin.read())
+        raw = sys.stdin.read()
+        if not raw:
+            print(json.dumps({"error": "❌ Python stdin이 비어있음"}))
+            sys.exit(1)
+        input_data = json.loads(raw)
         result = predict_simulation(input_data)
-        print(json.dumps(result, indent=2))
+        print(json.dumps(result))  # ✅ 항상 JSON 출력
     except Exception as e:
         import traceback
-        print(json.dumps({"error": f"예측 실패: {str(e)}", "traceback": traceback.format_exc()}))
+        print(json.dumps({
+            "error": f"예측 실패: {str(e)}",
+            "traceback": traceback.format_exc()
+        }))

@@ -121,6 +121,7 @@ public class PredictionServlet extends HttpServlet {
 
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()))) {
             writer.write(inputJson.toString());
+            writer.flush(); // ✅ 꼭 flush 해야 Python이 입력을 읽음
         }
 
         StringBuilder output = new StringBuilder();
@@ -138,7 +139,22 @@ public class PredictionServlet extends HttpServlet {
                 errorOutput.append(line);
             }
         }
-        process.waitFor();
+
+        int exitCode = process.waitFor();
+
+        // ✅ 디버깅 출력 추가
+        System.out.println("Python exit code: " + exitCode);
+        System.out.println("Python stdout: " + output.toString());
+        System.out.println("Python stderr: " + errorOutput.toString());
+
+        if (output.length() == 0) {
+            // 빈 출력일 경우 클라이언트에 명시적으로 전달
+            return new JSONObject()
+                .put("error", "Python 실행 결과가 비어 있습니다.")
+                .put("stderr", errorOutput.toString())
+                .toString();
+        }
+
         return output.toString();
     }
     

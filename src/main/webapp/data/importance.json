@@ -1,7 +1,7 @@
 {
-  "mean_pressure": 1.62,
-  "mean_temp": 60.76,
-  "mean_wind": 0.42,
-  "total_precip": 2.99,
-  "year": 34.21
+	"mean_pressure" : 1,
+	"mean_temp" : 60,
+	"mean_wind" : 0,
+	"total_precip" : 2,
+	"year" : 34
 }

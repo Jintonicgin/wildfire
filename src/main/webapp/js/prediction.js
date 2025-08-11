@@ -100,18 +100,26 @@ document.addEventListener("DOMContentLoaded", function () {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inputData)
         })
-        .then(res => res.text())
-        .then(text => {
-            showLoading(false);
+		.then(res => res.text()) 
+		.then(text => {
+		    showLoading(false);
 
-            try {
-                const data = JSON.parse(text);
+		    try {
+		        const jsonStart = text.indexOf('{');
+		        const jsonEnd = text.lastIndexOf('}');
 
-                if (data.error) {
-                    alert("❌ 예측 실패: " + data.error);
-                    console.error(data.details || data.error);
-                    return;
-                }
+		        if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
+		            throw new Error("JSON 형태가 아닌 응답입니다.");
+		        }
+
+		        const jsonStr = text.slice(jsonStart, jsonEnd + 1);
+		        const data = JSON.parse(jsonStr);
+
+		        if (data.error) {
+		            alert("❌ 예측 실패: " + data.error);
+		            console.error(data.traceback || data.error);
+		            return;
+		        }
                 
                 const startLat = region ? data.path_trace[0].lat : lat;
                 const startLng = region ? data.path_trace[0].lon : lng;
