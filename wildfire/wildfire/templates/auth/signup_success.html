@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+{% block title %}회원가입 완료{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="login-wrapper">
+    <div class="login-box">
+      <h2>회원가입이 완료되었습니다!</h2>
+      <p>이제 로그인하실 수 있습니다.</p>
+      <a href="{{ url_for('auth.login') }}">
+        <button>로그인 하러가기</button>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="login-wrapper">
+    <div class="login-box">
+      <a href="/" class="logo-link">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="login-logo">
+      </a>
+
+      <h2>비밀번호 재설정</h2>
+      <form action="{{ url_for('auth.reset_password') }}" method="post">
+        <input type="text" name="username" placeholder="아이디" required>
+        <input type="email" name="email" placeholder="이메일" required>
+        <input type="password" name="newPassword" placeholder="새 비밀번호" required>
+        <input type="password" name="confirmPassword" placeholder="비밀번호 확인" required>
+        <button type="submit">변경하기</button>
+      </form>
+
+      <div class="switch">
+        <a href="{{ url_for('auth.login') }}">로그인으로 돌아가기</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

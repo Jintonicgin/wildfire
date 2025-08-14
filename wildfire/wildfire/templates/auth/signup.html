@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+{% block title %}회원가입 - SEED{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="login-wrapper">
+    <div class="login-box">
+      <a href="{{ url_for('main.index') }}" class="logo-link">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="login-logo">
+      </a>
+
+      <h2>회원가입</h2>
+      <form method="post">
+        {{ form.hidden_tag() }}
+
+        {% for field, errors in form.errors.items() %}
+          <div class="alert alert-danger">
+              <strong>{{ form[field].label }}</strong>: {{ ", ".join(errors) }}
+          </div>
+        {% endfor %}
+
+        {{ form.username(class_="form-control", placeholder="아이디") }}
+        {{ form.email(class_="form-control", placeholder="이메일") }}
+        {{ form.password1(class_="form-control", placeholder="비밀번호") }}
+        {{ form.password2(class_="form-control", placeholder="비밀번호 확인") }}
+
+        <button type="submit">회원가입</button>
+      </form>
+
+      <div class="switch">
+        이미 계정이 있으신가요?
+        <a href="{{ url_for('auth.login') }}">로그인</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

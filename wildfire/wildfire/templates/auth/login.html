@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
+{% block title %}SEED 로그인{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="login-wrapper">
+    <div class="login-box">
+      <a href="{{ url_for('main.index') }}" class="logo-link">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="login-logo">
+      </a>
+
+      <form method="post">
+        {{ form.csrf_token }}
+        
+        {% for field, errors in form.errors.items() %}
+          <div class="alert alert-danger">
+              <strong>{{ form[field].label }}</strong>: {{ ", ".join(errors) }}
+          </div>
+        {% endfor %}
+
+        {{ form.username(class_="form-control", placeholder='아이디') }}
+        {{ form.password(class_="form-control", placeholder='비밀번호') }}
+        <button type="submit">로그인</button>
+      </form>
+
+      <div class="switch">
+        <a href="{{ url_for('auth.find_id') }}">아이디 찾기</a> &nbsp;|&nbsp;
+        <a href="{{ url_for('auth.reset_password') }}">비밀번호 찾기</a> &nbsp;|&nbsp;
+        <a href="{{ url_for('auth.signup') }}">회원가입</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

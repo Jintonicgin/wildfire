@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}">
+{% endblock %}
+
+{% block title %}About SEED{% endblock %}
+
+{% block content %}
+<div class="container main-content">
+  <section class="feature-section">
+    <h1>About SEED</h1>
+    <p class="mb-5">SEED는 최신 기술을 활용하여 산불 및 생태 재해를 예측하고 대응하는 지능형 플랫폼입니다.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <img src="{{ url_for('static', filename='img/icon_forest.png') }}" alt="GAI">
+        <h3>지리정보 AI (GAI)</h3>
+        <p>위성, 지형, 기후 데이터를 융합하여 복잡한 환경 패턴을 분석하고 예측합니다.</p>
+      </div>
+      <div class="feature-card">
+        <img src="{{ url_for('static', filename='img/icon_ai.png') }}" alt="AI Agent">
+        <h3>AI Agent</h3>
+        <p>상황을 자동으로 인지하고, 최적의 대응 전략을 수립하여 실행합니다.</p>
+      </div>
+      <div class="feature-card">
+        <img src="{{ url_for('static', filename='img/rag_icon.png') }}" alt="RAG">
+        <h3>문서기반 Q&A (RAG)</h3>
+        <p>방대한 재난 대응 매뉴얼과 연구자료를 기반으로 신뢰도 높은 답변을 제공합니다.</p>
+      </div>
+      <div class="feature-card">
+        <img src="{{ url_for('static', filename='img/icon_fire.png') }}" alt="ML">
+        <h3>산불 확산 예측 (ML)</h3>
+        <p>머신러닝으로 실시간 데이터를 분석하여 산불의 확산 경로와 속도를 예측합니다.</p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}자주 묻는 질문{% endblock %}
+
+{% block content %}
+<div class="container faq-container">
+  <h1>자주 묻는 질문 (FAQ)</h1>
+
+  <div class="faq-item">
+    <h3 class="faq-question">Q1. 산불 예측은 어떻게 이루어지나요?</h3>
+    <div class="faq-answer">
+      <p>저희 시스템은 인공위성 데이터(Google Earth Engine), 기상 데이터(NASA POWER), 그리고 지형 데이터를 활용하여 산불 확산 위험을 예측합니다. 사용자가 선택한 지역 또는 위경도 정보를 기반으로 머신러닝 모델이 분석을 수행합니다.</p>
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <h3 class="faq-question">Q2. 예측 결과는 얼마나 정확한가요?</h3>
+    <div class="faq-answer">
+      <p>저희 예측 모델은 다양한 환경 요인을 고려하여 개발되었으며, 지속적인 데이터 학습과 검증을 통해 정확도를 높이고 있습니다. 피해 면적을 예측하는 모델은 R² (결정 계수)와 RMSE를 사용하여 평가되었으며, 확산 방향 예측 모델과 확산 속도 예측 모델은 평균 정확도를 사용하여 평가되었고, [해당 점수]%의 정확도를 보입니다. 현재 모델의 성능은 다음과 같습니다:</p>
+      <ul>
+        <li><strong>피해 면적 예측 모델 (앙상블):</strong> R² (결정 계수) 약 0.98 (약 98%의 설명력), RMSE 약 40.77</li>
+        <li><strong>확산 속도 예측 모델 (앙상블):</strong> 평균 정확도 약 53.56%</li>
+        <li><strong>확산 방향 예측 모델 (GradientBoostingClassifier, XGBClassifier):</strong> 평균 정확도 약 98.11%</li>
+      </ul>
+      <p>하지만 산불은 예측하기 어려운 변수가 많으므로, 예측 결과는 참고 자료로 활용해주시기 바랍니다.</p>
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <h3 class="faq-question">Q3. 특정 지역의 산불 위험도를 알 수 있나요?</h3>
+    <div class="faq-answer">
+      <p>네, '산불 예측(ML)' 페이지에서 시/군을 선택하거나 지도에서 직접 위치를 클릭하여 해당 지역의 산불 확산 예측 결과를 확인할 수 있습니다. 예측 결과에는 예상 피해 면적, 확산 방향, 확산 속도 등이 포함됩니다.</p>
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <h3 class="faq-question">Q4. 로그인 없이도 예측 기능을 사용할 수 있나요?</h3>
+    <div class="faq-answer">
+      <p>아니요, 예측 기능은 로그인한 사용자만 이용할 수 있습니다. 이는 시스템의 안정적인 운영과 사용자별 맞춤 서비스 제공을 위함입니다. 회원가입은 무료이며 간단하게 진행할 수 있습니다.</p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', filename='js/faq.js') }}"></script>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/faq.css') }}">
+{% endblock %}

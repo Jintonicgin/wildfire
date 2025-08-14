@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% endblock %}
+
+{% block title %}SEED - Smart Ecological Evaluation & Diagnostics{% endblock %}
+
+{% block content %}
+<div class="container">
+<section class="hero-section carousel slide" id="heroCarousel" data-bs-ride="carousel" data-bs-interval="5000" data-bs-pause="hover">
+  <div class="carousel-inner">
+
+    <div class="carousel-item active">
+      <img src="{{ url_for('static', filename='img/forest2.png') }}" class="d-block w-100 hero-image" alt="GAI">
+      <div class="carousel-caption hero-caption">
+        <h1>지리정보 + AI = GAI</h1>
+        <p>지형, 위성, 기후 데이터를 통합한 환경 인공지능</p>
+        <a href="#" class="hero-btn">GAI 자세히 보기</a>
+      </div>
+    </div>
+
+    <div class="carousel-item">
+      <img src="{{ url_for('static', filename='img/forest.png') }}" class="d-block w-100 hero-image" alt="AI Agent">
+      <div class="carousel-caption hero-caption">
+        <h1>AI 에이전트로 자동화된 대응</h1>
+        <p>복잡한 분석을 대신하는 스마트 시스템</p>
+        <a href="#" class="hero-btn">AI Agent 사용해보기</a>
+      </div>
+    </div>
+
+    <div class="carousel-item">
+      <img src="{{ url_for('static', filename='img/forest3.png') }}" class="d-block w-100 hero-image" alt="RAG">
+      <div class="carousel-caption hero-caption">
+        <h1>RAG 기반 Q&A</h1>
+        <p>문서 검색 + 생성형 AI로 신뢰성 있는 응답</p>
+        <a href="#" class="hero-btn">RAG 시스템 보기</a>
+      </div>
+    </div>
+
+    <div class="carousel-item">
+      <img src="{{ url_for('static', filename='img/forest4.png') }}" class="d-block w-100 hero-image" alt="산불예측">
+      <div class="carousel-caption hero-caption">
+        <h1>산불 확산, ML로 예측</h1>
+        <p>기상·지형 데이터를 학습한 머신러닝 기반 예측</p>
+        <a href="{{ url_for('main.prediction') }}" class="hero-btn">산불 예측하러 가기</a>
+      </div>
+    </div>
+  </div>
+
+  <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+  </button>
+</section>
+
+<section class="features">
+  <h2 class="section-title">SEED 주요 기능</h2>
+  <div class="feature-list">
+    <div class="feature-item scroll-fade">
+      <div class="emoji">📊</div>
+      <h3>GAI</h3>
+      <p>지리 공간 AI 기반 데이터 분석</p>
+    </div>
+    <div class="feature-item scroll-fade">
+      <div class="emoji">🤖</div>
+      <h3>AI Agent</h3>
+      <p>산불 대응 자동화 에이전트</p>
+    </div>
+    <div class="feature-item scroll-fade">
+      <div class="emoji">📚</div>
+      <h3>RAG</h3>
+      <p>신뢰도 높은 문서 기반 질의응답</p>
+    </div>
+    <div class="feature-item scroll-fade">
+      <div class="emoji">🔥</div>
+      <h3>산불예측</h3>
+      <p>머신러닝 기반 확산 시뮬레이션</p>
+    </div>
+  </div>
+</section>
+
+<section class="scenario">
+  <h2 class="section-title">사용자 시나리오 미리보기</h2>
+  <div class="scenario-container">
+    <div class="scenario-box scroll-fade">
+      <div class="scenario-text">
+        <p>“지리 공간 AI로 보는 다차원 분석”</p>
+        <p>위성 이미지와 지형 데이터를 결합하여 산림 상태와 변화를 한눈에 파악합니다.</p>
+      </div>
+      <a href="#" class="scenario-button"> GAI 분석 보기 →</a>
+    </div>
+    <div class="scenario-box scroll-fade">
+      <div class="scenario-text">
+        <p>“상황 발생, AI 에이전트가 자동 대응”</p>
+        <p>실시간 데이터 유입 시, 위험도를 판단하고 관련 기관에 자동으로 보고합니다.</p>
+      </div>
+      <a href="#" class="scenario-button"> AI 에이전트 시연 →</a>
+    </div>
+    <div class="scenario-box scroll-fade">
+      <div class="scenario-text">
+        <p>“산불 대응 매뉴얼, 이제 물어보세요”</p>
+        <p>방대한 대응 절차 문서에서 가장 정확한 답변을 찾아 즉시 제공합니다.</p>
+      </div>
+      <a href="#" class="scenario-button"> RAG에 질문하기 →</a>
+    </div>
+    <div class="scenario-box scroll-fade">
+      <div class="scenario-text">
+        <p>“산불 확산, ML로 한발 앞서 예측”</p>
+        <p>과거 데이터를 학습한 모델이 미래의 확산 범위와 방향을 시뮬레이션합니다.</p>
+      </div>
+      <a href="{{ url_for('main.prediction') }}" class="scenario-button"> 산불 확산 예측 보기 →</a>
+    </div>
+  </div>
+</section>
+
+<section class="slogan scroll-fade">
+  <blockquote>
+    기술은 자연을 위해 존재합니다.<br />
+    <strong>AI와 함께 지구를 지키세요.</strong>
+  </blockquote>
+</section>
+</div>
+{% endblock %}

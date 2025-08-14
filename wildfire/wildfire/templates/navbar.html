@@ -1,0 +1,49 @@
+<header class="top-bar desktop-header">
+  <div class="logo-area">
+    <a href="{{ url_for('main.index') }}">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="logo-horizontal">
+    </a>
+  </div>
+
+  <nav class="main-nav">
+    <a href="#">GAI</a>
+    <a href="#">AI Agent</a>
+    <a href="#">RAG</a>
+    <a href="{{ url_for('main.prediction') }}">ML</a>
+  </nav>
+
+  <div class="auth-links">
+    <a href="{{ url_for('main.faq') }}">FAQ</a>
+    <a href="{{ url_for('main.aboutus') }}">ABOUT US</a>
+    {% if g.user %}
+      <a href="{{ url_for('auth.logout') }}">로그아웃</a>
+    {% else %}
+      <a href="{{ url_for('auth.login') }}">로그인 / 회원가입</a>
+    {% endif %}
+  </div>
+</header>
+
+<header class="mobile-header">
+  <div class="mobile-header-bar">
+    <a href="{{ url_for('main.index') }}">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="mobile-logo">
+    </a>
+    <button class="hamburger-btn" id="menu-toggle">☰</button>
+  </div>
+
+  <nav class="mobile-nav" id="mobile-menu">
+    <ul>
+      <li><a href="#">GAI</a></li>
+      <li><a href="#">AI Agent</a></li>
+      <li><a href="#">RAG</a></li>
+      <li><a href="{{ url_for('main.prediction') }}">ML</a></li>
+      <li><a href="{{ url_for('main.faq') }}">FAQ</a></li>
+      <li><a href="{{ url_for('main.aboutus') }}">ABOUT US</a></li>
+      {% if g.user %}
+        <li><a href="{{ url_for('auth.logout') }}">로그아웃</a></li>
+      {% else %}
+        <li><a href="{{ url_for('auth.login') }}">로그인 / 회원가입</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+</header>
