@@ -7,19 +7,12 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import RobustScaler
 import joblib
 import json
+from model_definitions import EnsembleRegressor, EnsembleClassifier
 
 SOURCE_DATA_PATH = "gangwon_fire_data_augmented_parallel.csv"
 MODEL_OUTPUT_PATH = "area_regressor_model_v2.joblib"
 COLUMNS_OUTPUT_PATH = "area_model_columns_v2.json"
 SCALER_OUTPUT_PATH = "area_model_scaler_v2.joblib"
-
-class EnsembleRegressor:
-    def __init__(self, models):
-        self.models = models
-
-    def predict(self, X):
-        preds = [model.predict(X) for model in self.models]
-        return np.mean(np.column_stack(preds), axis=1)
 
 def main():
     print(f"1. 데이터 로딩: {SOURCE_DATA_PATH}")

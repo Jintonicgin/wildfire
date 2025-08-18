@@ -1,4 +1,3 @@
-
 import sys
 import json
 import joblib
@@ -6,19 +5,15 @@ import datetime
 import numpy as np
 import pandas as pd
 import warnings
+from wildfire.dataset.model_definitions import EnsembleRegressor, EnsembleClassifier
+
+import sys
+sys.modules['__main__'].EnsembleRegressor = EnsembleRegressor
+sys.modules['__main__'].EnsembleClassifier = EnsembleClassifier
 
 warnings.filterwarnings("ignore")
 
-MODEL_PATH = "/Users/mmymacymac/Developer/Projects/eclipse/WildFire/dataset/"
-
-# --- 모델을 만들 때 사용된 클래스 정의 추가 ---
-class EnsembleRegressor:
-    def __init__(self, models):
-        self.models = models
-
-    def predict(self, X):
-        preds = [model.predict(X) for model in self.models]
-        return np.mean(np.column_stack(preds), axis=1)
+MODEL_PATH = "/Users/mmymacymac/Developer/Projects/WildFire_projects/wildfire/wildfire/dataset/"
 
 # --- v2 모델과 컬럼 로드 ---
 try:

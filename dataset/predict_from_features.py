@@ -5,7 +5,6 @@ import numpy as np
 import joblib
 import warnings
 
-# --- Custom EnsembleRegressor for unpickling ---
 class EnsembleRegressor:
     def __init__(self, models):
         self.models = models
@@ -16,7 +15,7 @@ class EnsembleRegressor:
 
 warnings.filterwarnings("ignore")
 
-MODEL_PATH = "/Users/mmymacymac/Developer/Projects/eclipse/WildFire/dataset/"
+MODEL_PATH = "/Users/mmymacymac/Developer/Projects/WildFire_projects/wildfire/wildfire/dataset/"
 
 # --- 모델 및 스케일러 로드 ---
 MODELS = {
