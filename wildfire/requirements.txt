@@ -1,0 +1,40 @@
+# Web
+Flask==3.1.2
+Werkzeug==3.1.3
+Jinja2==3.1.6
+itsdangerous==2.2.0
+click==8.2.2
+Flask-Cors==4.0.1
+python-dotenv==1.1.1
+gunicorn==22.0.0
+
+# HTTP / Utils
+requests==2.32.5
+
+# GEE / Google API
+earthengine-api==1.6.2
+google-auth==2.40.3
+google-api-python-client==2.177.0
+
+# NLP / Generative AI (Hugging Face)
+torch==2.8.0
+transformers==4.55.2
+sentencepiece==0.2.1
+safetensors==0.6.2
+langdetect==1.0.9
+
+# Data
+pandas==2.3.1
+numpy==2.3.2
+
+# PDF
+WeasyPrint==66.0
+tinycss2==1.4.0
+cssselect2==0.8.0
+pydyf==0.11.0
+fonttools==4.59.0
+Pillow==11.3.0
+zopfli==0.2.3.post1
+
+# Geocoding
+geopy==2.4.1

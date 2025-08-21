@@ -9,7 +9,7 @@ class Member(db.Model):
     password = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class RegionFeature(db.Model):
     __tablename__ = 'region_prediction_features'

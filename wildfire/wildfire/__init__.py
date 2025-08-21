@@ -3,10 +3,12 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
 from wildfire.dataset.model_definitions import EnsembleClassifier, EnsembleRegressor
-from dotenv import load_dotenv
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT_DIR / ".env", override=True)
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -24,11 +26,15 @@ def create_app():
     migrate.init_app(app,db)
 
     from . import models
-    from .views import main_views, auth_views, agent_views
+    from .views import main_views, auth_views, gai_views
 
     app.register_blueprint(main_views.bp)
     app.register_blueprint(auth_views.bp)
-    app.register_blueprint(agent_views.bp)
+    app.register_blueprint(gai_views.bp)
+
+    # Load AI models at startup for cloud environment
+    with app.app_context():
+        gai_views.load_pipelines()
 
     return app
 
