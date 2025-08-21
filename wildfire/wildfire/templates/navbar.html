@@ -6,9 +6,9 @@
   </div>
 
   <nav class="main-nav">
-    <a href="#">GAI</a>
-    <a href="#">AI Agent</a>
+    <a href="{{ url_for('agent.page_gai') }}">Generative AI</a>
     <a href="#">RAG</a>
+    <a href="#">Vision</a>
     <a href="{{ url_for('main.prediction') }}">ML</a>
   </nav>
 
@@ -33,9 +33,9 @@
 
   <nav class="mobile-nav" id="mobile-menu">
     <ul>
-      <li><a href="#">GAI</a></li>
-      <li><a href="#">AI Agent</a></li>
+      <li><a href="{{ url_for('agent.page_gai') }}">Generative AI</a></li>
       <li><a href="#">RAG</a></li>
+      <li><a href="#">Vision</a></li>
       <li><a href="{{ url_for('main.prediction') }}">ML</a></li>
       <li><a href="{{ url_for('main.faq') }}">FAQ</a></li>
       <li><a href="{{ url_for('main.aboutus') }}">ABOUT US</a></li>

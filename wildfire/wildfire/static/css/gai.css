@@ -1,0 +1,213 @@
+:root {
+  --bg: #ffffff;
+  --panel: #f3f7f5;
+  --border: #c7e5c1;
+  --text: #2b2b2b;
+  --muted: #2c6b50;
+  --accent: #76c893;
+  --accent-strong: #2f7f5e;
+  --shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif;
+  margin-top: 20px;
+}
+
+.gai-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px 24px 32px;
+}
+
+.gai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+.gai-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--muted);
+}
+
+.gai-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gai-controls select,
+.gai-controls input[type="number"] {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  font-size: 14px;
+  min-width: 160px;
+}
+
+.btn, .btn-secondary {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform .06s ease, background .2s ease;
+}
+
+.btn {
+  background: var(--accent);
+  color: #fff;
+}
+.btn:hover { background: var(--accent-strong); }
+.btn:active { transform: translateY(1px); }
+
+.btn-secondary {
+  background: #e9efe9;
+  color: #1c4031;
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: #dde7df; }
+.btn-secondary:active { transform: translateY(1px); }
+
+.chat-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.chat-window {
+  height: 520px;
+  overflow-y: auto;
+  padding: 16px 16px 4px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-message {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 8px 0;
+}
+
+.chat-message.user .bubble {
+  background: #fff;
+  border: 1px solid var(--border);
+  margin-left: auto;
+}
+
+.chat-message.bot .bubble {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: 0 0 28px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bubble {
+  max-width: 72%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.chat-input {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.chat-input textarea {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 46px;
+  max-height: 200px;
+}
+
+/* 로딩: 봇 아이콘 깜빡임 */
+.bot-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 1;
+  animation: fadePulse 1.1s infinite ease-in-out;
+}
+.bot-loading .bubble {
+  color: #777;
+}
+
+@keyframes fadePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+/* 전체 오버레이 로딩 (필요시 사용) */
+#gaiLoading {
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(255, 255, 255, .85);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+#gaiLoading.show { display: flex; }
+
+#gaiLoading .spinner {
+  width: 64px;
+  height: 64px;
+  border: 6px solid #ddd;
+  border-top: 6px solid var(--accent-strong);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 10px;
+}
+#gaiLoading p {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+@keyframes spin {
+  0% { transform: rotate(0) }
+  100% { transform: rotate(360deg) }
+}
+
+@media (max-width: 640px) {
+  .gai-controls select,
+  .gai-controls input[type="number"] { min-width: 130px; }
+  .bubble { max-width: 86%; }
+}

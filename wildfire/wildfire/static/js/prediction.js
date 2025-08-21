@@ -69,11 +69,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        // Remove change listener for the city dropdown
-        // document.getElementById('city').addEventListener('change', () => {
-        //     // ... existing logic ...
-        // });
-
         document.getElementById('selectCityButton').addEventListener('click', () => {
             const selectedCity = citySelect.getValue();
 
@@ -82,13 +77,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            // Clear previous city boundary polygon
             if (cityPolygonOverlay) {
                 cityPolygonOverlay.setMap(null);
                 cityPolygonOverlay = null;
             }
-            
-            // Clear previous prediction results
+
             if (currentPolygon) currentPolygon.setMap(null);
             if (currentArrow) currentArrow.setMap(null);
             if (currentLabel) currentLabel.setMap(null);
