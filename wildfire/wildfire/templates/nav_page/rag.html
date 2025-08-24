@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rag.css') }}" />
+{% endblock %}
+
+{% block title %}RAG{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <header class="topbar">
+    <h1>🔎 RAG  </h1>
+    <div class="right">
+      <button id="btnClear" class="btn danger">인덱스 초기화</button>
+    </div>
+  </header>
+
+  <section class="grid">
+    <!-- 좌: 인덱싱 패널 -->
+    <div class="card">
+      <h2>① 문서 인덱싱</h2>
+      <div class="row">
+        <label for="collectionId">컬렉션 ID</label>
+        <input id="collectionId" type="text" placeholder="예) default" />
+      </div>
+      <div class="row">
+        <label for="files">파일 업로드</label>
+        <input id="files" type="file" multiple accept=".txt,.md,.pdf" />
+      </div>
+      <div class="row">
+        <label for="chunkSize">청크 크기</label>
+        <input id="chunkSize" type="number" value="800" min="200" max="4000" />
+      </div>
+      <div class="row">
+        <label for="chunkOverlap">오버랩</label>
+        <input id="chunkOverlap" type="number" value="120" min="0" max="1000" />
+      </div>
+      <div class="row">
+        <button id="btnIndex" class="btn">인덱스 생성/추가</button>
+        <div id="indexStatus" class="muted"></div>
+      </div>
+      <p class="muted small">
+        지원 포맷: .txt, .md, .pdf
+      </p>
+    </div>
+
+    <!-- 우: 채팅 패널 -->
+    <div class="card">
+      <h2>② 질문하기</h2>
+      <div id="chatWindow" class="chat-window"></div>
+      <div class="chat-input">
+        <textarea id="userInput" placeholder="질문을 입력하세요..." rows="2"></textarea>
+        <button id="sendBtn" class="btn">전송</button>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/rag.js') }}"></script>
+{% endblock %}

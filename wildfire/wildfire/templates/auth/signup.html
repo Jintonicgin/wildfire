@@ -21,7 +21,6 @@
               <strong>{{ form[field].label }}</strong>: {{ ", ".join(errors) }}
           </div>
         {% endfor %}
-
         {{ form.username(class_="form-control", placeholder="아이디") }}
         {{ form.email(class_="form-control", placeholder="이메일") }}
         {{ form.password1(class_="form-control", placeholder="비밀번호") }}

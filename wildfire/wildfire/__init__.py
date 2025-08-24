@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g, session
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
@@ -23,18 +23,21 @@ def create_app():
         return {"kakao_key": app.config.get("KAKAO_MAP_KEY")}
 
     db.init_app(app)
-    migrate.init_app(app,db)
+    migrate.init_app(app, db)
 
-    from . import models
-    from .views import main_views, auth_views, gai_views
+    @app.before_request
+    def load_current_user():
+        g.user = None
+        username = session.get("user_username")
+        if username:
+            from .models import Member
+            g.user = db.session.get(Member, username)
+
+    from .views import main_views, auth_views, gai_views, rag_views
 
     app.register_blueprint(main_views.bp)
     app.register_blueprint(auth_views.bp)
     app.register_blueprint(gai_views.bp)
-
-    # Load AI models at startup for cloud environment
-    with app.app_context():
-        gai_views.load_pipelines()
+    app.register_blueprint(rag_views.bp)
 
     return app
-

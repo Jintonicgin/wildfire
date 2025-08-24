@@ -7,7 +7,9 @@
 
   <nav class="main-nav">
     <a href="{{ url_for('gai.gai') }}">Generative AI</a>
-    <a href="#">RAG</a>
+    {% if g.user and g.user.is_admin %}
+    <a href="{{ url_for('rag.rag') }}">RAG</a>
+    {% endif %}
     <a href="#">Vision</a>
     <a href="{{ url_for('main.prediction') }}">ML</a>
   </nav>
@@ -16,6 +18,7 @@
     <a href="{{ url_for('main.faq') }}">FAQ</a>
     <a href="{{ url_for('main.aboutus') }}">ABOUT US</a>
     {% if g.user %}
+      <li class="right muted">안녕하세요, {{ g.user.name or g.user.username }}님</li>
       <a href="{{ url_for('auth.logout') }}">로그아웃</a>
     {% else %}
       <a href="{{ url_for('auth.login') }}">로그인 / 회원가입</a>
@@ -34,12 +37,15 @@
   <nav class="mobile-nav" id="mobile-menu">
     <ul>
       <li><a href="{{ url_for('gai.gai') }}">Generative AI</a></li>
-      <li><a href="#">RAG</a></li>
+      {% if g.user and g.user.is_admin %}
+      <li><a href="{{ url_for('rag.rag') }}">RAG</a></li>
+      {% endif %}
       <li><a href="#">Vision</a></li>
       <li><a href="{{ url_for('main.prediction') }}">ML</a></li>
       <li><a href="{{ url_for('main.faq') }}">FAQ</a></li>
       <li><a href="{{ url_for('main.aboutus') }}">ABOUT US</a></li>
       {% if g.user %}
+        <li class="right muted">안녕하세요, {{ g.user.name or g.user.username }}님</li>
         <li><a href="{{ url_for('auth.logout') }}">로그아웃</a></li>
       {% else %}
         <li><a href="{{ url_for('auth.login') }}">로그인 / 회원가입</a></li>

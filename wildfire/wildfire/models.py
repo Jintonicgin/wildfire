@@ -1,6 +1,7 @@
 from wildfire import db
 from datetime import datetime
 
+
 class Member(db.Model):
     __tablename__ = 'member'
     __bind_key__ = 'seed'
@@ -10,6 +11,10 @@ class Member(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+    # ✅ Oracle용 BOOLEAN 대체
+    is_admin = db.Column(db.Integer, default=0, nullable=False)  # 0 = False, 1 = True
+
 
 class RegionFeature(db.Model):
     __tablename__ = 'region_prediction_features'
@@ -54,4 +59,4 @@ class RegionFeature(db.Model):
     is_summer = db.Column(db.Integer) # Assuming 0 or 1
     is_autumn = db.Column(db.Integer) # Assuming 0 or 1
     is_winter = db.Column(db.Integer) # Assuming 0 or 1
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
