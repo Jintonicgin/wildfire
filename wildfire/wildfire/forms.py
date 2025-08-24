@@ -3,8 +3,9 @@ from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length, EqualTo, Email
 
 class UserCreateForm(FlaskForm):
-    username = StringField('아이디', validators=[DataRequired(), Length(min=3, max=30)])
+    name = StringField("이름", validators=[DataRequired(), Length(min=1, max=50)])
     email = StringField('이메일', validators=[DataRequired(), Email(), Length(max=100)])
+    username = StringField('아이디', validators=[DataRequired(), Length(min=3, max=30)])
     password1 = PasswordField('비밀번호', validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField('비밀번호 확인', validators=[DataRequired(), EqualTo('password1')])
     submit = SubmitField('회원가입')

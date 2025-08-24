@@ -45,8 +45,8 @@ def signup():
                 username=form.username.data,
                 password=generate_password_hash(form.password1.data),
                 email=form.email.data,
-                name=form.name.data if hasattr(form, "name") else None,
-                is_admin=False  # 기본은 관리자 아님
+                name=form.name.data,  # ← forms.py에 name 필드 추가되어 있어야 함
+                is_admin=False
             )
             db.session.add(new_user)
             db.session.commit()
@@ -140,10 +140,14 @@ def load_logged_in_user():
     """
     - 세션에서 user_username 읽어 DB 조회
     - g.user에 Member 또는 None 저장
-    - 템플릿/뷰에서 g.user와 g.user.is_admin 사용 가능
+    - 유저가 DB에 없으면 세션 키 제거(죽은 세션 방지)
     """
     user_username = session.get('user_username')
-    if user_username is None:
+    if not user_username:
         g.user = None
-    else:
-        g.user = Member.query.get(user_username)
+        return
+
+    user = db.session.get(Member, user_username)
+    if user is None:
+        session.pop('user_username', None)
+    g.user = user

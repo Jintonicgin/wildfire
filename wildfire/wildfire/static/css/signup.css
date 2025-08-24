@@ -9,10 +9,11 @@ body {
 
 .container {
   max-width: 1200px;
-  margin: 0 auto;
+  margin-top: 80px;
+  margin-bottom: 40px;
 }
 
-.login-wrapper {
+.signup-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -21,9 +22,9 @@ body {
   margin-bottom: 10px;
 }
 
-.login-box {
+.signup-box {
   background-color: #ffffff;
-  padding: 60px 32px;
+  padding: 40px 32px;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -39,7 +40,7 @@ body {
   margin-bottom: 16px;
 }
 
-.login-logo {
+.signup-logo {
   width: 140px;
   height: auto;
   opacity: 0.95;
@@ -47,7 +48,7 @@ body {
   margin-left: -8px;
 }
 
-.login-logo:hover {
+.signup-logo:hover {
   transform: scale(1.02);
 }
 
@@ -61,14 +62,14 @@ input[type="text"],
 input[type="password"],
 input[type="email"] {
   width: 100%;
-  padding: 14px 18px; 
+  padding: 14px 18px;
   margin-bottom: 14px;
   font-size: 1rem;
   border: 1px solid #a3cbb0;
   border-radius: 12px;
   background-color: #f5fcf8;
   color: #264638;
-  box-sizing: border-box; 
+  box-sizing: border-box;
 }
 
 button {
@@ -88,7 +89,7 @@ button:hover {
   background-color: #2c7d5b;
 }
 
-.login-options {
+.signup-options {
   margin-top: 8px;
   font-size: 0.9rem;
   color: #2e3b3a;

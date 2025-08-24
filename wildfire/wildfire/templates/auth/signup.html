@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
 {% endblock %}
 {% block title %}회원가입 - SEED{% endblock %}
 
 {% block content %}
 <div class="container">
-  <div class="login-wrapper">
-    <div class="login-box">
+  <div class="signup-wrapper">
+    <div class="signup-box">
       <a href="{{ url_for('main.index') }}" class="logo-link">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="login-logo">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SEED 로고" class="signup-logo">
       </a>
 
       <h2>회원가입</h2>
@@ -21,8 +21,9 @@
               <strong>{{ form[field].label }}</strong>: {{ ", ".join(errors) }}
           </div>
         {% endfor %}
-        {{ form.username(class_="form-control", placeholder="아이디") }}
+        {{ form.name(class_="form-control", placeholder="이름", autocomplete="name") }}
         {{ form.email(class_="form-control", placeholder="이메일") }}
+        {{ form.username(class_="form-control", placeholder="아이디") }}
         {{ form.password1(class_="form-control", placeholder="비밀번호") }}
         {{ form.password2(class_="form-control", placeholder="비밀번호 확인") }}
 

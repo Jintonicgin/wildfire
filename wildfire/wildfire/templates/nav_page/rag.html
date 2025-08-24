@@ -1,56 +1,83 @@
 {% extends "base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/rag.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/rag.css') }}">
 {% endblock %}
-
-{% block title %}RAG{% endblock %}
+{% block title %}RAG 콘솔{% endblock %}
 
 {% block content %}
-<div class="wrap">
+<div class="wrap rag-page">
+  <!-- 상단바 -->
   <header class="topbar">
-    <h1>🔎 RAG  </h1>
+    <h1>🔎 RAG 콘솔</h1>
     <div class="right">
-      <button id="btnClear" class="btn danger">인덱스 초기화</button>
+      <button id="btnRefreshStats" class="btn secondary">상태 새로고침</button>
+      <button id="btnReindex" class="btn danger">인덱스 전체 재생성</button>
     </div>
   </header>
 
+  <!-- 2열 그리드 -->
   <section class="grid">
-    <!-- 좌: 인덱싱 패널 -->
+    <!-- (좌) 문서 인덱싱 -->
     <div class="card">
       <h2>① 문서 인덱싱</h2>
-      <div class="row">
-        <label for="collectionId">컬렉션 ID</label>
-        <input id="collectionId" type="text" placeholder="예) default" />
-      </div>
-      <div class="row">
+
+      <div class="row stack">
         <label for="files">파일 업로드</label>
         <input id="files" type="file" multiple accept=".txt,.md,.pdf" />
       </div>
+
       <div class="row">
-        <label for="chunkSize">청크 크기</label>
-        <input id="chunkSize" type="number" value="800" min="200" max="4000" />
-      </div>
-      <div class="row">
-        <label for="chunkOverlap">오버랩</label>
-        <input id="chunkOverlap" type="number" value="120" min="0" max="1000" />
-      </div>
-      <div class="row">
-        <button id="btnIndex" class="btn">인덱스 생성/추가</button>
+        <button id="btnIndex" class="btn">업로드 → 인덱싱</button>
         <div id="indexStatus" class="muted"></div>
       </div>
+
+      <hr>
+
       <p class="muted small">
-        지원 포맷: .txt, .md, .pdf
+        지원 포맷: <code>.txt</code>, <code>.md</code>, <code>.pdf</code><br>
+        (대량 수집은 서버의 <code>RAG_CORPUS_DIR</code> 경로를 사용해 “인덱스 전체 재생성”으로 처리)
       </p>
     </div>
 
-    <!-- 우: 채팅 패널 -->
+    <!-- (우) 인덱스 상태/검색 테스트 -->
     <div class="card">
-      <h2>② 질문하기</h2>
-      <div id="chatWindow" class="chat-window"></div>
-      <div class="chat-input">
-        <textarea id="userInput" placeholder="질문을 입력하세요..." rows="2"></textarea>
-        <button id="sendBtn" class="btn">전송</button>
+      <h2>② 상태 & 검색 테스트</h2>
+
+      <!-- 상태 -->
+      <div class="stat-panel">
+        <div class="stat-item">
+          <div class="stat-label">컬렉션</div>
+          <div id="statCollection" class="stat-value">-</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">문서 청크 수</div>
+          <div id="statPoints" class="stat-value">-</div>
+        </div>
       </div>
+
+      <hr>
+
+      <!-- 검색 -->
+      <div class="row stack">
+        <label for="ragQuery">검색 쿼리</label>
+        <textarea id="ragQuery" rows="3" placeholder="예) 강원 산불 원인과 정부 대응 정리해줘"></textarea>
+      </div>
+
+      <div class="row cols-3">
+        <div>
+          <label for="topK">Top-K</label>
+          <input id="topK" type="number" value="5" min="1" max="20">
+        </div>
+        <div>
+          <label for="threshold">임계값(0~1)</label>
+          <input id="threshold" type="number" value="0.25" min="0" max="1" step="0.01">
+        </div>
+        <div class="flex-end">
+          <button id="btnSearch" class="btn">검색</button>
+        </div>
+      </div>
+
+      <div id="results" class="results"></div>
     </div>
   </section>
 </div>
