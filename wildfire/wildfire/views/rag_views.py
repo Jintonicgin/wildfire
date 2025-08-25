@@ -1,11 +1,9 @@
-from flask import Blueprint, request, jsonify, render_template
-from werkzeug.utils import secure_filename
+# wildfire/views/rag_views.py
+from flask import Blueprint, request, jsonify, render_template, g
 import os
-import io
-import uuid
-from typing import List, Dict, Tuple
+from typing import List
+
 from wildfire.auth_utils import admin_required
-from wildfire.rag_store import get_store, Embeddings, QdrantStore
 
 bp = Blueprint("rag", __name__)
 
@@ -13,70 +11,37 @@ bp = Blueprint("rag", __name__)
 RAG_COLLECTION   = os.getenv("RAG_COLLECTION", "wildfire_corpus")
 RAG_TOP_K        = int(os.getenv("RAG_TOP_K", "5"))
 RAG_THRESHOLD    = float(os.getenv("RAG_SCORE_THRESHOLD", "0.25"))
-RAG_CHUNK_SIZE   = int(os.getenv("RAG_CHUNK_SIZE", "800"))
-RAG_CHUNK_OVERLP = int(os.getenv("RAG_CHUNK_OVERLAP", "120"))
-RAG_CORPUS_DIR   = os.getenv("RAG_CORPUS_DIR", "wildfire/dataset/corpus")
+RAG_CORPUS_DIR   = os.getenv("RAG_CORPUS_DIR", "wildfire/corpus")  # 서버 일괄 인덱싱 대상
 
-# 전역 인스턴스 (간단 캐시)
-_store: QdrantStore = get_store()
-_emb  = Embeddings()
+# ===== Lazy creators (요청 스코프) =====
+def get_store_lazy():
+    """
+    QdrantStore를 처음 접근할 때만 생성.
+    """
+    if not hasattr(g, "_rag_store"):
+        from wildfire.rag_store import get_store  # 무거운 import 지연
+        g._rag_store = get_store()
+    return g._rag_store
 
-# ===== 유틸: 텍스트 추출 =====
-def _read_txt_or_md(fp: io.BytesIO, encoding="utf-8") -> str:
-    return fp.read().decode(encoding, errors="ignore")
+def get_emb_lazy():
+    """
+    SentenceTransformer 래퍼(쿼리 임베딩용)를 처음 접근할 때만 생성.
+    """
+    if not hasattr(g, "_rag_emb"):
+        from wildfire.rag_store import Embeddings
+        g._rag_emb = Embeddings()
+    return g._rag_emb
 
-def _read_pdf(fp: io.BytesIO) -> str:
-    try:
-        import PyPDF2  # optional
-    except Exception:
-        return ""
-    fp.seek(0)
-    reader = PyPDF2.PdfReader(fp)
-    parts = []
-    for page in reader.pages:
-        t = page.extract_text() or ""
-        parts.append(t)
-    return "\n".join(parts)
+def get_ingestor_lazy():
+    """
+    업로드/재인덱싱용 Ingestor를 처음 접근할 때만 생성.
+    (내부적으로 SentenceTransformer/NLLB 등을 초기화하므로 지연)
+    """
+    if not hasattr(g, "_rag_ingestor"):
+        from wildfire.rag_ingest import Ingestor
+        g._rag_ingestor = Ingestor()
+    return g._rag_ingestor
 
-def _extract_text(filename: str, filebytes: bytes) -> str:
-    name = (filename or "").lower()
-    b = io.BytesIO(filebytes)
-    if name.endswith(".txt") or name.endswith(".md"):
-        return _read_txt_or_md(b)
-    if name.endswith(".pdf"):
-        return _read_pdf(b)
-    return ""  # 미지원 확장자
-
-# ===== 유틸: 청킹 =====
-def _chunk(s: str, size: int, overlap: int) -> List[str]:
-    s = (s or "").strip()
-    if not s:
-        return []
-    out = []
-    start = 0
-    n = len(s)
-    step = max(1, size - max(0, overlap))
-    while start < n:
-        out.append(s[start:start+size])
-        start += step
-    return out
-
-# ===== 유틸: 업서트 =====
-def _ensure_collection(dim: int):
-    _store.ensure_collection(RAG_COLLECTION, dim)
-
-def _upsert_texts(texts: List[str], meta_base: Dict):
-    if not texts:
-        return 0
-    vecs = _emb.encode(texts)
-    _ensure_collection(dim=len(vecs[0]))
-    from wildfire.rag_store import DocChunk  # dataclass
-    chunks = [
-        DocChunk(id=str(uuid.uuid4()), text=t, meta=meta_base)
-        for t in texts
-    ]
-    _store.upsert(RAG_COLLECTION, chunks, vecs)
-    return len(chunks)
 
 # ===== 페이지 =====
 @bp.get("/rag")
@@ -84,89 +49,157 @@ def _upsert_texts(texts: List[str], meta_base: Dict):
 def rag():
     return render_template("nav_page/rag.html")
 
+
 # ===== API: 통계 =====
 @bp.get("/api/rag/stats")
 @admin_required
 def rag_stats():
     try:
-        # Qdrant 통계 (컬렉션이 없으면 예외 → 0 처리)
+        store = get_store_lazy()
         try:
-            info = _store.client.get_collection(RAG_COLLECTION)
-            # count
-            cnt = _store.client.count(RAG_COLLECTION, exact=True).count
+            info = store.client.get_collection(RAG_COLLECTION)
+            cnt = store.client.count(RAG_COLLECTION, exact=True).count
         except Exception:
-            info = None
-            cnt = 0
+            info, cnt = None, 0
+
         return jsonify({
             "ok": True,
             "stats": {
                 "collection": RAG_COLLECTION,
                 "points": cnt,
-                "qdrant_info": (info.dict() if info else None)
+                "qdrant_info": (info.dict() if info else None),
             }
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
 
 # ===== API: 디렉토리 재인덱싱 =====
 @bp.post("/api/rag/reindex")
 @admin_required
 def rag_reindex():
     """
-    RAG_CORPUS_DIR 안의 .txt/.md/.pdf를 스캔 → 전체 재생성(간단히 recreate)
+    서버 디렉토리(RAG_CORPUS_DIR)의 PDF들을 다시 스캔해서 컬렉션을 완전히 재구축.
     """
     try:
-        # recreate 대신: 내부 ensure_collection은 recreate가 아니라 새로 만들기만 함.
-        # "완전 초기화"를 원하면 Qdrant의 recreate_collection을 직접 호출:
-        from qdrant_client.http import models as qmodels
-        # 임시로 임베딩 차원 파악
-        probe_vec = _emb.encode(["probe"])[0]
+        # 1) 컬렉션 완전 재생성 (차원 파악을 위해 probe 임베딩)
+        emb = get_emb_lazy()
+        probe_vec = emb.encode(["probe"])[0]
         dim = len(probe_vec)
-        # 완전 재생성
-        _store.client.recreate_collection(
+
+        store = get_store_lazy()
+        from qdrant_client.http import models as qmodels
+        store.client.recreate_collection(
             collection_name=RAG_COLLECTION,
             vectors_config=qmodels.VectorParams(size=dim, distance=qmodels.Distance.COSINE),
         )
 
-        total = 0
+        # 2) 디렉토리 내 PDF 수집
+        paths: List[str] = []
         for root, _, files in os.walk(RAG_CORPUS_DIR):
             for fn in files:
-                if not (fn.lower().endswith(".txt") or fn.lower().endswith(".md") or fn.lower().endswith(".pdf")):
-                    continue
-                path = os.path.join(root, fn)
-                with open(path, "rb") as f:
-                    text = _extract_text(fn, f.read())
-                chunks = _chunk(text, RAG_CHUNK_SIZE, RAG_CHUNK_OVERLP)
-                total += _upsert_texts(chunks, meta_base={"source": "corpus", "filename": fn})
-        return jsonify({"ok": True, "indexed": total})
+                if fn.lower().endswith(".pdf"):
+                    paths.append(os.path.join(root, fn))
+
+        # 3) 일괄 인덱싱
+        ing = get_ingestor_lazy()
+        stats = ing.ingest_paths(paths)
+
+        return jsonify({"ok": True, "indexed_files": stats.file_count, "indexed_chunks": stats.chunk_count})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
 
 # ===== API: 파일 업로드 인덱싱 =====
 @bp.post("/api/rag/index-files")
 @admin_required
 def rag_index_files():
     """
-    관리자 업로드(.txt/.md/.pdf)로 증분 인덱싱
+    관리자 업로드(.pdf) 파일을 받아 corpus 디렉토리에 저장 후 즉시 인덱싱.
     """
     try:
         files = request.files.getlist("files")
         if not files:
             return jsonify({"ok": False, "error": "NO_FILES"}), 400
 
-        added_total = 0
-        for f in files:
-            filename = secure_filename(f.filename or "uploaded")
-            data = f.read()
-            text = _extract_text(filename, data)
-            if not text:
-                continue
-            chunks = _chunk(text, RAG_CHUNK_SIZE, RAG_CHUNK_OVERLP)
-            added_total += _upsert_texts(chunks, meta_base={"source": "upload", "filename": filename})
+        # corpus 디렉토리 생성 (없다면)
+        corpus_dir = os.path.join("wildfire", "wildfire", "corpus")
+        os.makedirs(corpus_dir, exist_ok=True)
 
-        return jsonify({"ok": True, "added": added_total})
+        ing = get_ingestor_lazy()
+        added_total = 0
+        saved_files = []
+
+        for f in files:
+            filename = f.filename or "uploaded.pdf"
+            if not filename.lower().endswith(".pdf"):
+                # 필요하면 .txt/.md 지원 추가 가능
+                continue
+            
+            # 파일 데이터 읽기
+            data = f.read()
+            
+            # 중복 파일명 처리 (timestamp 추가)
+            import datetime
+            base_name, ext = os.path.splitext(filename)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_filename = f"{base_name}_{timestamp}{ext}"
+            
+            # corpus 디렉토리에 파일 저장
+            file_path = os.path.join(corpus_dir, safe_filename)
+            with open(file_path, "wb") as corpus_file:
+                corpus_file.write(data)
+            
+            # 벡터DB에 인덱싱
+            added = ing.ingest_pdf_bytes(data, filename=safe_filename)
+            added_total += added
+            
+            saved_files.append({
+                "original_name": filename,
+                "saved_name": safe_filename,
+                "chunks": added
+            })
+
+        return jsonify({
+            "ok": True, 
+            "added": added_total,
+            "files": saved_files,
+            "corpus_path": corpus_dir
+        })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ===== API: corpus 파일 목록 =====
+@bp.get("/api/rag/corpus-files")
+@admin_required
+def rag_corpus_files():
+    """
+    corpus 디렉토리의 파일 목록 반환
+    """
+    try:
+        corpus_dir = os.path.join("wildfire", "wildfire", "corpus")
+        if not os.path.exists(corpus_dir):
+            return jsonify({"ok": True, "files": []})
+        
+        files = []
+        for filename in os.listdir(corpus_dir):
+            if filename.lower().endswith('.pdf'):
+                file_path = os.path.join(corpus_dir, filename)
+                stat = os.stat(file_path)
+                files.append({
+                    "name": filename,
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime
+                })
+        
+        # 최신 파일 먼저 정렬
+        files.sort(key=lambda x: x["modified"], reverse=True)
+        
+        return jsonify({"ok": True, "files": files, "count": len(files)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 # ===== API: 검색 =====
 @bp.get("/api/rag/search")
@@ -175,12 +208,17 @@ def rag_search():
     q = (request.args.get("q") or "").strip()
     top_k = int(request.args.get("k") or RAG_TOP_K)
     thr   = float(request.args.get("thr") or RAG_THRESHOLD)
+
     if not q:
         return jsonify({"ok": False, "error": "EMPTY_QUERY"}), 400
+
     try:
-        qv = _emb.encode([q])[0]
-        hits = _store.query(RAG_COLLECTION, qv, k=top_k, score_threshold=thr)
-        # hits: [{"text":..., "meta":..., "score":...}]
+        emb = get_emb_lazy()
+        store = get_store_lazy()
+
+        qv = emb.encode([q])[0]
+        hits = store.query(RAG_COLLECTION, qv, k=top_k, score_threshold=thr)
+        # hits: [{"id","text","meta","score"}]
         return jsonify({"ok": True, "results": hits})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500

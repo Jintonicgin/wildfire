@@ -6,7 +6,6 @@
 
 {% block content %}
 <div class="wrap rag-page">
-  <!-- 상단바 -->
   <header class="topbar">
     <h1>🔎 RAG 콘솔</h1>
     <div class="right">
@@ -15,7 +14,6 @@
     </div>
   </header>
 
-  <!-- 2열 그리드 -->
   <section class="grid">
     <!-- (좌) 문서 인덱싱 -->
     <div class="card">
@@ -28,22 +26,33 @@
 
       <div class="row">
         <button id="btnIndex" class="btn">업로드 → 인덱싱</button>
-        <div id="indexStatus" class="muted"></div>
+        <div id="indexStatus" class="status-line muted"></div>
       </div>
 
       <hr>
 
+      <hr>
+      
+      <div class="corpus-files">
+        <div class="row">
+          <strong>📁 저장된 파일 목록</strong>
+          <button id="btnRefreshFiles" class="btn secondary" style="margin-left: auto;">새로고침</button>
+        </div>
+        <div id="corpusFilesList" class="corpus-list">
+          <div class="muted small">파일 목록을 불러오는 중...</div>
+        </div>
+      </div>
+
       <p class="muted small">
         지원 포맷: <code>.txt</code>, <code>.md</code>, <code>.pdf</code><br>
-        (대량 수집은 서버의 <code>RAG_CORPUS_DIR</code> 경로를 사용해 “인덱스 전체 재생성”으로 처리)
+        (업로드된 파일은 자동으로 corpus 폴더에 저장되고 벡터DB에 인덱싱됩니다)
       </p>
     </div>
 
-    <!-- (우) 인덱스 상태/검색 테스트 -->
+    <!-- (우) 인덱스 상태/검색 -->
     <div class="card">
       <h2>② 상태 & 검색 테스트</h2>
 
-      <!-- 상태 -->
       <div class="stat-panel">
         <div class="stat-item">
           <div class="stat-label">컬렉션</div>
@@ -57,7 +66,6 @@
 
       <hr>
 
-      <!-- 검색 -->
       <div class="row stack">
         <label for="ragQuery">검색 쿼리</label>
         <textarea id="ragQuery" rows="3" placeholder="예) 강원 산불 원인과 정부 대응 정리해줘"></textarea>
@@ -80,6 +88,9 @@
       <div id="results" class="results"></div>
     </div>
   </section>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast hidden"></div>
 </div>
 {% endblock %}
 
