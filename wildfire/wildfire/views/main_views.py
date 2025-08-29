@@ -15,6 +15,7 @@ if '__main__' in sys.modules:
 
 bp = Blueprint('main', __name__)
 
+
 def convert_degree_to_direction(deg):
     if deg is None or not isinstance(deg, (int, float)) or deg == -999:
         return 'N'

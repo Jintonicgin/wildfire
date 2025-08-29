@@ -80,8 +80,5 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.2.2/css/tom-select.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.2.2/js/tom-select.complete.min.js"></script>
 
-<script>
-  window.isLoggedIn = {{ g.user is not none | tojson }};
-</script>
 <script src="{{ url_for('static', filename='js/prediction.js') }}"></script>
 {% endblock %}

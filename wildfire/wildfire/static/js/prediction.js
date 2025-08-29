@@ -158,11 +158,6 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById('predictionForm').addEventListener('submit', function (e) {
         e.preventDefault();
 
-        if (!window.isLoggedIn) {
-            alert("로그인 후 이용하실 수 있습니다.");
-            window.location.href = "/auth/login";
-            return;
-        }
 
         const region = citySelect.getValue();
         const lat = parseFloat(document.getElementById('latitude').value);

@@ -1,6 +1,9 @@
 from wildfire.dataset.model_definitions import EnsembleClassifier, EnsembleRegressor
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()
+
 sys.modules['__main__'].EnsembleRegressor = EnsembleRegressor
 sys.modules['__main__'].EnsembleClassifier = EnsembleClassifier
 

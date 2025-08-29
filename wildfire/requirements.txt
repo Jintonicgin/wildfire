@@ -54,3 +54,5 @@ pytesseract>=0.3.10
 # FastAPI
 fastapi>=0.110
 uvicorn[standard]>=0.30
+
+FlagEmbedding>=1.2.0

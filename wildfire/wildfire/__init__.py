@@ -17,6 +17,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     app.config["KAKAO_MAP_KEY"] = os.getenv("KAKAO_MAP_KEY")
+    app.config["JSON_AS_ASCII"] = False
 
     @app.context_processor
     def inject_public_keys():

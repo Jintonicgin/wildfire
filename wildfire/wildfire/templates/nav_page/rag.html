@@ -2,82 +2,35 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/rag.css') }}">
 {% endblock %}
-{% block title %}RAG 콘솔{% endblock %}
+{% block title %}RAG{% endblock %}
 
 {% block content %}
 <div class="wrap rag-page">
   <header class="topbar">
-    <h1>🔎 RAG 콘솔</h1>
-    <div class="right">
-      <button id="btnRefreshStats" class="btn secondary">상태 새로고침</button>
-      <button id="btnReindex" class="btn danger">인덱스 전체 재생성</button>
-    </div>
+    <h1>산불 정보 검색 시스템</h1>
   </header>
 
-  <section class="grid">
-    <!-- (좌) 문서 인덱싱 -->
+  <section class="main-content">
+    <!-- 검색 및 질문 섹션 -->
     <div class="card">
-      <h2>① 문서 인덱싱</h2>
+      <h2>🔍 산불 정보 검색 & 질문</h2>
 
       <div class="row stack">
-        <label for="files">파일 업로드</label>
-        <input id="files" type="file" multiple accept=".txt,.md,.pdf" />
-      </div>
-
-      <div class="row">
-        <button id="btnIndex" class="btn">업로드 → 인덱싱</button>
-        <div id="indexStatus" class="status-line muted"></div>
-      </div>
-
-      <hr>
-
-      <hr>
-      
-      <div class="corpus-files">
-        <div class="row">
-          <strong>📁 저장된 파일 목록</strong>
-          <button id="btnRefreshFiles" class="btn secondary" style="margin-left: auto;">새로고침</button>
-        </div>
-        <div id="corpusFilesList" class="corpus-list">
-          <div class="muted small">파일 목록을 불러오는 중...</div>
-        </div>
-      </div>
-
-      <p class="muted small">
-        지원 포맷: <code>.txt</code>, <code>.md</code>, <code>.pdf</code><br>
-        (업로드된 파일은 자동으로 corpus 폴더에 저장되고 벡터DB에 인덱싱됩니다)
-      </p>
-    </div>
-
-    <!-- (우) 인덱스 상태/검색 -->
-    <div class="card">
-      <h2>② 상태 & 검색 테스트</h2>
-
-      <div class="stat-panel">
-        <div class="stat-item">
-          <div class="stat-label">컬렉션</div>
-          <div id="statCollection" class="stat-value">-</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">문서 청크 수</div>
-          <div id="statPoints" class="stat-value">-</div>
-        </div>
-      </div>
-
-      <hr>
-
-      <div class="row stack">
-        <label for="ragQuery">검색 쿼리</label>
-        <textarea id="ragQuery" rows="3" placeholder="예) 강원 산불 원인과 정부 대응 정리해줘"></textarea>
+        <label for="ragQuery">질문 또는 검색어를 입력하세요</label>
+        <textarea id="ragQuery" rows="4" placeholder="예) 강원도 산불의 주요 원인은 무엇인가요? 산불 예방 방법을 알려주세요."></textarea>
       </div>
 
       <div class="row cols-3">
         <div>
-          <label for="topK">Top-K</label>
+          <label for="topK">검색 결과 수</label>
           <input id="topK" type="number" value="5" min="1" max="20">
         </div>
         <div>
-          <label for="threshold">임계값(0~1)</label>
+          <label for="threshold">정확도 점수</label>
+          <button type="button" id="thrInfo"
+            aria-label="도움말"
+            title="점수가 높을수록 질문과 더 유사한 문서만 포함됩니다. 낮추면 더 많은 문서가 나오지만 정확도가 떨어질 수 있어요."
+            class="info-btn">ⓘ</button>
           <input id="threshold" type="number" value="0.25" min="0" max="1" step="0.01">
         </div>
         <div class="flex-end">
@@ -94,6 +47,6 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block script %}
 <script src="{{ url_for('static', filename='js/rag.js') }}"></script>
 {% endblock %}

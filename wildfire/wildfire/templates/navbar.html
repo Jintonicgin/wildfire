@@ -7,9 +7,7 @@
 
   <nav class="main-nav">
     <a href="{{ url_for('gai.gai') }}">Generative AI</a>
-    {% if g.user and g.user.is_admin %}
     <a href="{{ url_for('rag.rag') }}">RAG</a>
-    {% endif %}
     <a href="#">Vision</a>
     <a href="{{ url_for('main.prediction') }}">ML</a>
   </nav>
@@ -37,9 +35,7 @@
   <nav class="mobile-nav" id="mobile-menu">
     <ul>
       <li><a href="{{ url_for('gai.gai') }}">Generative AI</a></li>
-      {% if g.user and g.user.is_admin %}
       <li><a href="{{ url_for('rag.rag') }}">RAG</a></li>
-      {% endif %}
       <li><a href="#">Vision</a></li>
       <li><a href="{{ url_for('main.prediction') }}">ML</a></li>
       <li><a href="{{ url_for('main.faq') }}">FAQ</a></li>
