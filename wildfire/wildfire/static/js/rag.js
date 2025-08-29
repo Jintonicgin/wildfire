@@ -1,4 +1,9 @@
+// rag.js — safe single-call, debounce, better errors
 (function () {
+  // --- prevent duplicate bindings on hot-reload ---
+  if (window.__RAG_JS_BOUND__) return;
+  window.__RAG_JS_BOUND__ = true;
+
   const $ = (sel) => document.querySelector(sel);
 
   // ---------- DOM ----------
@@ -10,18 +15,13 @@
   const toastEl    = $("#toast");
 
   // ---------- UI helpers ----------
-  function toast(msg, ms = 2000) {
+  function toast(msg, ms = 2200) {
     if (!toastEl) return;
     toastEl.textContent = msg;
     toastEl.classList.remove("hidden");
     setTimeout(() => toastEl.classList.add("hidden"), ms);
   }
-
-  function setDisabled(el, on) {
-    if (!el) return;
-    el.disabled = !!on;
-  }
-
+  function setDisabled(el, on) { if (el) el.disabled = !!on; }
   function escapeHtml(s) {
     return (s || "")
       .replace(/&/g, "&amp;")
@@ -40,7 +40,6 @@
               <div class="src-head">
                 <span class="tag">${escapeHtml(s.id || "")}</span>
                 <strong class="src-name">${escapeHtml(s.source || "doc")}</strong>
-                <span class="score">관련도: ${score != null ? score.toFixed(3) : "-"}</span>
               </div>
               <pre class="src-snippet">${escapeHtml(s.text || "")}</pre>
             </div>`;
@@ -66,12 +65,23 @@
       credentials: "same-origin",
       body: JSON.stringify(body || {}),
     });
-    if (!r.ok) throw new Error(await r.text());
+    // 에러 텍스트도 확보
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      const err = new Error(txt || `HTTP ${r.status}`);
+      err.status = r.status;
+      throw err;
+    }
     return r.json();
   }
 
   // ---------- Actions ----------
+  let asking = false;              // in-flight guard
+  let enterTimer = null;           // debounce for Enter
+
   async function ask() {
+    if (asking) return;            // 이미 요청 중이면 무시
+
     const q   = (ragQuery && ragQuery.value.trim()) || "";
     const k   = parseInt((topK && topK.value) || "5", 10);
     const thr = parseFloat((threshold && threshold.value) || "0.25");
@@ -81,6 +91,7 @@
       return;
     }
 
+    asking = true;
     setDisabled(btnSearch, true);
     results.innerHTML = `<div class="muted small">검색 및 생성 중…</div>`;
 
@@ -95,24 +106,34 @@
         toast(data.error || "요청 실패");
       }
     } catch (err) {
-      results.innerHTML = `<div class="muted small">요청 중 오류</div>`;
-      toast("요청 중 오류");
+      // 502 등 서버 게이트웨이 오류 메시지 일부 표기
+      const msg =
+        err?.status === 502 ? "백엔드 게이트웨이 오류(502)" :
+        err?.message ? (err.message.slice(0, 180) + (err.message.length > 180 ? "…" : "")) :
+        "요청 중 오류";
+      results.innerHTML = `<div class="muted small">${escapeHtml(msg)}</div>`;
+      toast(msg);
       console.error(err);
     } finally {
       setDisabled(btnSearch, false);
+      asking = false;
     }
   }
 
   // ---------- Bindings ----------
-  if (btnSearch) btnSearch.addEventListener("click", ask);
+  if (btnSearch) {
+    // 한 번만 묶이도록 옵션 사용
+    btnSearch.addEventListener("click", ask, { passive: true });
+  }
 
-  // 엔터로 전송
   if (ragQuery) {
+    // Enter 키 디바운스(200ms) + 중복 방지
     ragQuery.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        ask();
+        clearTimeout(enterTimer);
+        enterTimer = setTimeout(() => ask(), 200);
       }
-    });
+    }, { passive: false });
   }
 })();

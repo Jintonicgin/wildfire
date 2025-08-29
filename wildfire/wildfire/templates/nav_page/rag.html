@@ -18,23 +18,15 @@
       <div class="row stack">
         <label for="ragQuery">질문 또는 검색어를 입력하세요</label>
         <textarea id="ragQuery" rows="4" placeholder="예) 강원도 산불의 주요 원인은 무엇인가요? 산불 예방 방법을 알려주세요."></textarea>
+        <div class="flex-end">
+          <button id="btnSearch" class="btn">검색</button>
+        </div>
       </div>
 
       <div class="row cols-3">
         <div>
           <label for="topK">검색 결과 수</label>
           <input id="topK" type="number" value="5" min="1" max="20">
-        </div>
-        <div>
-          <label for="threshold">정확도 점수</label>
-          <button type="button" id="thrInfo"
-            aria-label="도움말"
-            title="점수가 높을수록 질문과 더 유사한 문서만 포함됩니다. 낮추면 더 많은 문서가 나오지만 정확도가 떨어질 수 있어요."
-            class="info-btn">ⓘ</button>
-          <input id="threshold" type="number" value="0.25" min="0" max="1" step="0.01">
-        </div>
-        <div class="flex-end">
-          <button id="btnSearch" class="btn">검색</button>
         </div>
       </div>
 
