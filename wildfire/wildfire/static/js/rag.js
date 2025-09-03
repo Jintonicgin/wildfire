@@ -65,7 +65,7 @@
       credentials: "same-origin",
       body: JSON.stringify(body || {}),
     });
-    // 에러 텍스트도 확보
+
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
       const err = new Error(txt || `HTTP ${r.status}`);

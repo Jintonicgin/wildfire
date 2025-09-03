@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 import os
+import json
 import requests
 from flask import Blueprint, request, jsonify, render_template
 from langdetect import detect, LangDetectException
@@ -14,10 +15,11 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 bp = Blueprint("gai", __name__)
 
 # ===================== 설정 =====================
-GAI_BACKEND = (os.getenv("GAI_BACKEND_URL", "https://lijpcw8himz39f-8080.proxy.runpod.net") or "").rstrip("/")
+# ⚠️ RAG 컨텍스트는 이 백엔드(클라우드 FastAPI)의 /api/rag/* 를 호출해 가져온다.
+GAI_BACKEND = (os.getenv("GAI_BACKEND_URL", "").strip() or "").rstrip("/")
 GAI_TIMEOUT = int(os.getenv("GAI_TIMEOUT", "120"))
 
-# 요약/번역(HF)
+# 요약/번역(HF — 로컬 폴백)
 TEXT_GEN_MODEL = os.getenv("GAI_TEXT_GEN_MODEL", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")  # (미사용: 로컬 생성은 Ollama)
 SUM_MODEL      = os.getenv("GAI_SUMMARY_MODEL", "sshleifer/distilbart-cnn-12-6")
 NLLB_MODEL     = os.getenv("GAI_TRANS_MODEL", "facebook/nllb-200-distilled-600M")
@@ -34,11 +36,16 @@ SUM_MAXLEN    = int(os.getenv("GAI_SUMMARY_MAXLEN", "80"))
 SUM_LEN_TRIG  = int(os.getenv("GAI_SUMMARY_LENGTH_THRESHOLD", "280"))
 
 # ====== Ollama (로컬 생성) ======
-USE_OLLAMA = (os.getenv("USE_OLLAMA", "true").lower() == "true")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
-OLLAMA_MODEL = os.getenv("LLAMA_MODEL", "llama3.1:8b-instruct-q4_K_M")
+USE_OLLAMA      = (os.getenv("USE_OLLAMA", "true").lower() == "true")
+OLLAMA_URL      = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+OLLAMA_MODEL    = os.getenv("LLAMA_MODEL", "llama3.1:8b-instruct-q4_K_M")
 OLLAMA_TEMPERATURE = float(os.getenv("LLAMA_TEMPERATURE", "0.7"))
-OLLAMA_TOP_P = float(os.getenv("LLAMA_TOP_P", "0.9"))
+OLLAMA_TOP_P    = float(os.getenv("LLAMA_TOP_P", "0.9"))
+
+# ====== RAG 검색 파라미터(클라우드 호출에 사용) ======
+RAG_REQUIRE_CONTEXT  = (os.getenv("RAG_REQUIRE_CONTEXT", "true").lower() == "true")  # 문맥 없으면 답변 금지
+RAG_TOP_K            = int(os.getenv("RAG_TOP_K", "5"))
+RAG_SCORE_THRESHOLD  = float(os.getenv("RAG_SCORE_THRESHOLD", "0.25"))
 
 # 세션 메모리
 _session_histories: dict[str, list[dict[str, str]]] = {}
@@ -167,29 +174,80 @@ def _push_hist(sid: str | None, role: str, content: str) -> None:
     if len(lst) > _MAX_TURNS:
         del lst[0:len(lst)-_MAX_TURNS]
 
-def local_chat_with_memory(text: str, temperature: float | None, sid: str | None) -> str:
-    """
-    로컬 대화는 Ollama로 수행. 최근 히스토리를 포함한 간단 프롬프트.
-    """
-    hist = _get_hist(sid)
+
+def fetch_rag_context(query: str, *, k: int | None = None, thr: float | None = None) -> tuple[str | None, list[dict] | None, dict | None]:
+    if not GAI_BACKEND:
+        return None, None, {"error": "NO_CLOUD_BACKEND_CONFIGURED"}
+
+    url = f"{GAI_BACKEND}/api/rag/search"
+    payload = {
+        "query": (query or "").strip(),
+        "k": int(k or RAG_TOP_K),
+        "thr": float(thr if thr is not None else RAG_SCORE_THRESHOLD),
+        "return_context": True,
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=GAI_TIMEOUT)
+        if r.status_code == 200:
+            j = r.json() or {}
+            if not j.get("ok"):
+                return None, None, {"error": j}
+            ctx = j.get("context") or ""
+            src = j.get("sources") or []
+            if not ctx.strip():
+                return None, None, {"error": "NO_RAG_CONTEXT"}
+            return ctx, src, None
+
+        # 에러 응답
+        try:
+            j = r.json()
+        except Exception:
+            j = {"error": r.text}
+        return None, None, {"status_code": r.status_code, "error": j}
+    except requests.exceptions.RequestException as e:
+        return None, None, {"error": f"RAG_BACKEND_REQUEST_FAILED: {e}"}
+
+
+def local_chat_with_rag_ollama(user_text: str, temperature: float | None, sid: str | None) -> tuple[str | None, dict | None]:
+    ctx, _, err = fetch_rag_context(user_text, k=RAG_TOP_K, thr=RAG_SCORE_THRESHOLD)
+    if err or not ctx:
+        if RAG_REQUIRE_CONTEXT:
+            return None, {"error": err or "NO_RAG_CONTEXT"}
 
     sys = (
         "당신은 한국어로 친절하고 간결하게 답하는 비서입니다. "
-        "사실에 기반해 답하고, 모르면 모른다고 말하세요."
+        "반드시 한국어로만 답하며, 제공된 참고 문맥에 근거해 사실적으로 답변하세요. "
+        "문맥에 없는 내용은 추측하지 말고 '제공된 정보로는 확인할 수 없습니다.'라고 답하세요."
     )
 
-    pieces: list[str] = [f"[시스템]\n{sys}"]
-    for m in hist[-10:]:
-        tag = "사용자" if m["role"] == "user" else "도우미"
-        pieces.append(f"[{tag}]\n{m['content']}")
-    pieces.append(f"[사용자]\n{text}\n[도우미]\n")
+    if ctx:
+        prompt = (
+            f"[시스템]\n{sys}\n\n"
+            f"[참고 문맥(context)]\n{ctx}\n\n"
+            f"[사용자]\n{user_text}\n\n"
+            f"[도우미]\n"
+        )
+    else:
+        # 문맥 비필수인 경우에만 도달
+        prompt = (
+            f"[시스템]\n{sys}\n\n"
+            f"[사용자]\n{user_text}\n\n"
+            f"[도우미]\n"
+        )
 
-    prompt = "\n".join(pieces)
-    reply = _ollama_chat(prompt, temperature=temperature if temperature is not None else TEMP_DEFAULT, top_p=TOP_P)
+    # 3) Ollama 호출
+    reply = _ollama_chat(
+        prompt,
+        temperature=temperature if temperature is not None else TEMP_DEFAULT,
+        top_p=TOP_P,
+        timeout=GAI_TIMEOUT,
+    )
 
-    _push_hist(sid, "user", text)
+    # 세션 히스토리
+    _push_hist(sid, "user", user_text)
     _push_hist(sid, "assistant", reply)
-    return reply
+
+    return reply.strip(), None
 
 
 # ===================== Flask routes =====================
@@ -197,13 +255,13 @@ def local_chat_with_memory(text: str, temperature: float | None, sid: str | None
 def gai():
     return render_template("nav_page/gai.html")
 
+
 @bp.post("/api/gai/chat")
 def api_gai_chat():
     data = request.get_json(silent=True) or {}
     text = (data.get("text") or "").strip()
     temperature = data.get("temperature", None)
 
-    # ★ 세션 유지 로직 동일
     sid = data.get("session_id") or request.cookies.get("gai_session_id")
     new_sid = False
     if not sid:
@@ -216,14 +274,13 @@ def api_gai_chat():
             resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
         return resp, 400
 
-    # ★ 의도 판단 (요약/번역/대화)
     mode = auto_route(text)
 
     try:
         if mode.startswith("translate:"):
             direction = mode.split(":", 1)[1]  # "ko->en" or "en->ko"
             if GAI_BACKEND:
-                # 클라우드 번역 엔드포인트 호출
+
                 r = requests.post(
                     f"{GAI_BACKEND}/api/gai/translate",
                     json={"text": text, "direction": direction},
@@ -237,7 +294,7 @@ def api_gai_chat():
                     resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
                 return resp, 200
             else:
-                # 백엔드 없으면 로컬 NLLB 폴백
+
                 out = local_translate(text, direction)
                 resp = jsonify({"ok": True, "reply": out, "mode": "translate (local-fallback)", "session_id": sid})
                 if new_sid:
@@ -246,7 +303,7 @@ def api_gai_chat():
 
         elif mode == "summarize":
             if GAI_BACKEND:
-                # 클라우드 요약 엔드포인트 호출
+
                 r = requests.post(
                     f"{GAI_BACKEND}/api/gai/summarize",
                     json={"text": text},
@@ -260,7 +317,7 @@ def api_gai_chat():
                     resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
                 return resp, 200
             else:
-                # 백엔드 없으면 로컬 요약 폴백
+
                 out = local_summarize(text)
                 resp = jsonify({"ok": True, "reply": out, "mode": "summarize (local-fallback)", "session_id": sid})
                 if new_sid:
@@ -268,15 +325,33 @@ def api_gai_chat():
                 return resp, 200
 
         else:
-            # ★ 대화는 항상 로컬 Ollama (의도대로)
-            reply = local_chat_with_memory(text, temperature, sid)
-            resp = jsonify({"ok": True, "reply": reply, "mode": "chat (local-ollama)", "session_id": sid})
+            if not USE_OLLAMA:
+                resp = jsonify({"ok": False, "error": "OLLAMA_DISABLED"})
+                if new_sid:
+                    resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
+                return resp, 503
+
+            reply, err = local_chat_with_rag_ollama(text, temperature, sid)
+            if err or not reply:
+                status = 422 if (err and "NO_RAG_CONTEXT" in str(err)) else 502
+                resp = jsonify({"ok": False, "error": err or "RAG_OR_GEN_FAILED"})
+                if new_sid:
+                    resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
+                return resp, status
+
+            resp = jsonify({"ok": True, "reply": reply, "mode": "chat (ollama-with-rag)", "session_id": sid})
             if new_sid:
                 resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
             return resp, 200
 
     except requests.exceptions.RequestException as e:
-        # 클라우드 호출 실패 → 로컬 폴백
+        if mode == "chat":
+            resp = jsonify({"ok": False, "error": f"RAG_BACKEND_REQUEST_FAILED: {e}"})
+            if new_sid:
+                resp.set_cookie("gai_session_id", sid, max_age=60*60*24*7, samesite="Lax")
+            return resp, 502
+
+        # 번역/요약만 로컬 폴백 허용
         try:
             if mode.startswith("translate:"):
                 direction = mode.split(":", 1)[1]
@@ -286,8 +361,11 @@ def api_gai_chat():
                 out = local_summarize(text)
                 j = {"ok": True, "reply": out, "mode": "summarize (local-fallback)", "error_proxy": str(e), "session_id": sid}
             else:
-                out = local_chat_with_memory(text, temperature, sid)
-                j = {"ok": True, "reply": out, "mode": "chat (local-fallback)", "error_proxy": str(e), "session_id": sid}
+                # chat은 폴백 금지 (RAG 필수 정책)
+                j = {"ok": False, "error": f"CHAT_REQUIRES_RAG_CONTEXT: {e}", "session_id": sid}
+                resp = jsonify(j)
+                if new_sid: resp.set_cookie("gai_session_id", sid, max_age=604800, samesite="Lax")
+                return resp, 502
             resp = jsonify(j)
             if new_sid: resp.set_cookie("gai_session_id", sid, max_age=604800, samesite="Lax")
             return resp, 200
@@ -295,6 +373,7 @@ def api_gai_chat():
             resp = jsonify({"ok": False, "error": f"BACKEND_REQUEST_FAILED: {e}; LOCAL_FALLBACK_FAILED: {e_local}"})
             if new_sid: resp.set_cookie("gai_session_id", sid, max_age=604800, samesite="Lax")
             return resp, 502
+
 
 @bp.get("/api/gai/healthz")
 def api_gai_health():

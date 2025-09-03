@@ -123,7 +123,7 @@ def _build_context_from_hits(hits: List[Dict[str, Any]], max_chars_each: int) ->
 def rag():
     return render_template("nav_page/rag.html")
 
-# ====== 검색: 클라우드에 위임 (재랭킹 포함) ======
+
 @bp.get("/api/rag/search")
 def rag_search():
     q = (request.args.get("q") or "").strip()
@@ -133,13 +133,12 @@ def rag_search():
         return jsonify({"ok": False, "error": "EMPTY_QUERY"}), 400
     try:
         j, status = _cloud_post("/api/rag/search", json={"query": q, "k": k, "thr": thr}, timeout=90)
-        # 클라우드가 200 이외 상태(예: 422)를 내리더라도 프런트에서 그대로 처리할 수 있게 그대로 전달
+
         return jsonify(j), status
     except Exception as e:
         logger.exception("rag_search failed")
         return jsonify({"ok": False, "error": str(e)}), 500
 
-# ====== 질문: 클라우드에서 검색+생성+출처 전부 처리 ======
 @bp.post("/api/rag/ask")
 def rag_ask():
     try:
@@ -150,15 +149,11 @@ def rag_ask():
         if not q:
             return jsonify({"ok": False, "error": "EMPTY_QUERY"}), 400
 
-        # 클라우드에서 검색+생성 모두 수행
         j, status = _cloud_post("/api/rag/ask", json={"query": q, "k": k, "thr": thr}, timeout=180)
 
-        # 프런트 rag.js의 postJSON은 non-200을 throw하므로
-        # 사용자 오류형(422 등)은 200으로 내려주어 UI가 data.error로 안내문을 띄우도록 함
         if status == 422:
             return jsonify(j), 200
 
-        # 그 외 상태는 그대로 전달 (예: 500 등 서버 오류)
         return jsonify(j), status
 
     except Exception as e:
