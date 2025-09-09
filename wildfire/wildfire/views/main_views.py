@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify
 from wildfire import db
 from wildfire.models import RegionFeature
-from wildfire.dataset.predict import predict_simulation
-from wildfire.dataset.predict_from_feature import predict_from_features
-from wildfire.dataset.model_definitions import EnsembleClassifier, EnsembleRegressor
+from wildfire.ML.predict import predict_simulation
+from wildfire.ML.predict_from_feature import predict_by_region
+from wildfire.ML.model_definitions import EnsembleClassifier, EnsembleRegressor
 import datetime
 import math
 import sys
@@ -123,7 +123,7 @@ def predict_wildfire():
                 "lng": initial_lon,
                 "durationhours": duration_hours,
             }
-            prediction_result = predict_from_features(input_for_predict_from_features)
+            prediction_result = predict_by_region(city_name, duration_hours)
 
         elif latitude is not None and longitude is not None:
             initial_lat = latitude
@@ -148,24 +148,17 @@ def predict_wildfire():
         spread_speed_value = 0.0
         total_distance = 0.0
 
-        if city_name: # Case: predict_from_features
-            area_m2 = final_damage_area * 10000
-            aspect_ratio = 0.6 # From prediction.js
-            b = math.sqrt(area_m2 / (math.pi * aspect_ratio))
-            a = b / aspect_ratio # This 'a' is the totalDistance for ellipse
-            total_distance = a
+        if city_name: # Case: predict_by_region
+            # Use prediction results from ML models
+            total_distance = prediction_result.get("total_distance", 0.0)
+            spread_direction = prediction_result.get("predicted_spread_direction", "N/A")
+            model_speed = prediction_result.get("predicted_spread_speed", 0.0)
             
-            if path_trace:
-                last_trace = path_trace[-1]
-                wind_direction_deg = last_trace.get("wind_direction_deg")
-                spread_direction = convert_degree_to_direction(wind_direction_deg)
-            else:
-                spread_direction = "N/A"
-
+            # Calculate speed based on model prediction and distance
             if duration_hours > 0:
-                spread_speed_value = total_distance / duration_hours
+                spread_speed_value = max(model_speed, total_distance / duration_hours)
             else:
-                spread_speed_value = 0.0
+                spread_speed_value = model_speed
 
         elif latitude is not None and longitude is not None: # Case: predict_simulation
             final_lat = prediction_result.get("final_lat")

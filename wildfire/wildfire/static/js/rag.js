@@ -1,6 +1,4 @@
-// rag.js — safe single-call, debounce, better errors
 (function () {
-  // --- prevent duplicate bindings on hot-reload ---
   if (window.__RAG_JS_BOUND__) return;
   window.__RAG_JS_BOUND__ = true;
 

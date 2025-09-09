@@ -1,0 +1,12 @@
+{
+  "events": [
+    {
+      "type": "fire/smoke",
+      "frames": 172,
+      "message": "Signal detected"
+    }
+  ],
+  "meta": {
+    "frames_processed": 172
+  }
+}

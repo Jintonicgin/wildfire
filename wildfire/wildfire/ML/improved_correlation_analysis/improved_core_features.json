@@ -1,0 +1,19 @@
+[
+  "startyear",
+  "startmonth",
+  "startday",
+  "dry_days_7d_start",
+  "dry_days_14d_start",
+  "dry_days_30d_start",
+  "dry_days_60d_start",
+  "dry_days_90d_start",
+  "consecutive_dry_days_start",
+  "T2M_0h",
+  "RH2M_0h",
+  "WS10M_0h",
+  "Precipitation_PC1",
+  "PS_0h",
+  "Precipitation_PC2",
+  "WD10M_0h",
+  "Precipitation_PC3"
+]

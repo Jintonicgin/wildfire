@@ -12,7 +12,6 @@ class Member(db.Model):
     name = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-    # ✅ Oracle용 BOOLEAN 대체
     is_admin = db.Column(db.Integer, default=0, nullable=False)  # 0 = False, 1 = True
 
 
