@@ -27,7 +27,7 @@ NLLB_MODEL     = os.getenv("GAI_TRANS_MODEL", "facebook/nllb-200-distilled-600M"
 NLLB_EN = os.getenv("NLLB_EN", "eng_Latn")
 NLLB_KO = os.getenv("NLLB_KO", "kor_Hang")
 
-GEN_MAX_NEW   = int(os.getenv("GAI_GEN_MAX_NEW_TOKENS", "512"))
+GEN_MAX_NEW   = int(os.getenv("GAI_GEN_MAX_NEW_TOKENS", "64"))
 TEMP_DEFAULT  = float(os.getenv("GAI_TEMPERATURE", "0.7"))
 TOP_P         = float(os.getenv("GAI_TOP_P", "0.9"))
 
@@ -43,7 +43,7 @@ OLLAMA_TEMPERATURE = float(os.getenv("LLAMA_TEMPERATURE", "0.7"))
 OLLAMA_TOP_P    = float(os.getenv("LLAMA_TOP_P", "0.9"))
 
 # ====== RAG 검색 파라미터(클라우드 호출에 사용) ======
-RAG_REQUIRE_CONTEXT = os.getenv("RAG_REQUIRE_CONTEXT", "true").lower() == "true"
+RAG_REQUIRE_CONTEXT  = (os.getenv("RAG_REQUIRE_CONTEXT", "true").lower() == "true")  # 문맥 없으면 답변 금지
 RAG_TOP_K            = int(os.getenv("RAG_TOP_K", "5"))
 RAG_SCORE_THRESHOLD  = float(os.getenv("RAG_SCORE_THRESHOLD", "0.25"))
 
@@ -207,6 +207,7 @@ def fetch_rag_context(query: str, *, k: int | None = None, thr: float | None = N
     except requests.exceptions.RequestException as e:
         return None, None, {"error": f"RAG_BACKEND_REQUEST_FAILED: {e}"}
 
+
 def local_chat_with_rag_ollama(user_text: str, temperature: float | None, sid: str | None) -> tuple[str | None, dict | None]:
     ctx, _, err = fetch_rag_context(user_text, k=RAG_TOP_K, thr=RAG_SCORE_THRESHOLD)
     if err or not ctx:
@@ -214,13 +215,9 @@ def local_chat_with_rag_ollama(user_text: str, temperature: float | None, sid: s
             return None, {"error": err or "NO_RAG_CONTEXT"}
 
     sys = (
-        "당신은 친절하고 자세하게 답하는 한국어 비서입니다. 답변을 할때는 무조건 한글을 사용해서 한국어로 답하세요"
-        "일본어, 중국어, 한자, 러시아어, 영어로 절대 대답하지 마세요. 꼭 한국어로 답하세요."
-        "한국어 외의 다른 언어를 사용하지 마세요. 한글 외에 다른 글자를 사용하지 마세요."
-        "항상 한국어로만 대답하세요. 영어로 절대 대답하지 마세요. 무조건 한국어로 답하세요."
-        "다음에 제공되는 '참고 문맥(context)'이 있을 경우 이를 최우선으로 활용해 사실에 근거해 답하세요. "
-        "'참고 문맥(context)'가 영어라도 답변은 무조건 한국어로 답하세요."
-        "문맥에 없는 내용은 추측하지 말고 '제공된 정보로는 확인할 수 없습니다.'라고 답하세요. "
+        "당신은 한국어로 친절하고 간결하게 답하는 비서입니다. "
+        "반드시 한국어로만 답하며, 제공된 참고 문맥에 근거해 사실적으로 답변하세요. "
+        "문맥에 없는 내용은 추측하지 말고 '제공된 정보로는 확인할 수 없습니다.'라고 답하세요."
     )
 
     if ctx:

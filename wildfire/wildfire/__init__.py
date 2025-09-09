@@ -2,7 +2,7 @@ from flask import Flask, g, session
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
-from wildfire.ML.model_definitions import EnsembleClassifier, EnsembleRegressor
+from wildfire.dataset.model_definitions import EnsembleClassifier, EnsembleRegressor
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -34,12 +34,11 @@ def create_app():
             from .models import Member
             g.user = db.session.get(Member, username)
 
-    from .views import main_views, auth_views, gai_views, rag_views, vision_views
+    from .views import main_views, auth_views, gai_views, rag_views
 
     app.register_blueprint(main_views.bp)
     app.register_blueprint(auth_views.bp)
     app.register_blueprint(gai_views.bp)
     app.register_blueprint(rag_views.bp)
-    app.register_blueprint(vision_views.bp)
 
     return app

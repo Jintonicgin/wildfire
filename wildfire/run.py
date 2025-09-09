@@ -1,4 +1,4 @@
-from wildfire.ML.model_definitions import EnsembleClassifier, EnsembleRegressor
+from wildfire.dataset.model_definitions import EnsembleClassifier, EnsembleRegressor
 import sys
 
 from dotenv import load_dotenv
