@@ -8,11 +8,11 @@ from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-bp = Blueprint("rag", __name__)
+bp = Blueprint("rag", __name__, url_prefix="/rag")
 
 # ====== 환경설정 ======
 # 클라우드 FastAPI(또는 Flask) 백엔드 베이스 URL
-CLOUD_GAI_BASE       = os.getenv("GAI_BACKEND_URL", "https://lijpcw8himz39f-8080.proxy.runpod.net").rstrip("/")
+CLOUD_GAI_BASE       = os.getenv("GAI_BACKEND_URL", "https://ow7i71e6sg8a4b-8080.proxy.runpod.net/").rstrip("/")
 
 # (선택) 클라우드 인증 전달 방법 – 필요 시만 세팅
 CLOUD_BEARER_TOKEN   = os.getenv("CLOUD_BEARER_TOKEN", "").strip()
@@ -119,12 +119,12 @@ def _build_context_from_hits(hits: List[Dict[str, Any]], max_chars_each: int) ->
     return {"context": "\n".join(ctx_lines).strip(), "sources": sources}
 
 # ====== 페이지 ======
-@bp.get("/rag")
+@bp.get("")
 def rag():
     return render_template("nav_page/rag.html")
 
 
-@bp.get("/api/rag/search")
+@bp.get("/search")
 def rag_search():
     q = (request.args.get("q") or "").strip()
     k = int(request.args.get("k") or RAG_TOP_K)
@@ -139,7 +139,7 @@ def rag_search():
         logger.exception("rag_search failed")
         return jsonify({"ok": False, "error": str(e)}), 500
 
-@bp.post("/api/rag/ask")
+@bp.post("/ask")
 def rag_ask():
     try:
         data = request.get_json(silent=True) or {}
@@ -161,7 +161,7 @@ def rag_ask():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # ====== 질문 스트리밍: 클라우드에서 검색+생성 스트림 중계 ======
-@bp.post("/api/rag/ask_stream")
+@bp.post("/ask_stream")
 def rag_ask_stream():
     try:
         data = request.get_json(silent=True) or {}

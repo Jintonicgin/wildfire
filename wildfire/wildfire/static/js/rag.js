@@ -96,7 +96,7 @@
     results.innerHTML = `<div class="muted small">검색 및 생성 중…</div>`;
 
     try {
-      const data = await postJSON("/api/rag/ask", { query: q, k, thr });
+      const data = await postJSON("/rag/ask", { query: q, k, thr });
       if (data.ok) {
         renderAnswer(data.answer, data.sources);
       } else if (data.error === "NO_CONTEXT") {

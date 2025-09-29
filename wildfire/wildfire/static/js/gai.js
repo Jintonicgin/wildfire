@@ -98,7 +98,7 @@ if (!sessionId) {
     setSendingState(true);
 
     try {
-      const res = await fetch("/api/gai/chat", {
+      const res = await fetch("/gai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, session_id: sessionId })
